@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Option 3 · shortcode &middot; Blissful Ignorance</title>
+<link rel="stylesheet" href="assets/wp.css">
+</head>
+<body>
+<div class="demo-note">Static demo of <strong>WordPress mascot-embedding methods</strong>. These pages mimic a classic WordPress theme; each option page explains exactly what you would do on a real site.</div>
+<header class="site-head"><div class="wrap">
+  <h1 class="site-title"><a href="index.html">Blissful Ignorance</a></h1>
+  <p class="site-tag">don&rsquo;t worry, be bread</p>
+</div></header>
+<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="option-1-iframe.html">1 &middot; iframe</a><a href="option-2-inline.html">2 &middot; inline</a><a href="option-3-shortcode.html" class="active">3 &middot; shortcode</a><a href="option-4-corner.html">4 &middot; corner</a></div></nav>
+<div class="wrap cols">
+<main>
+<article>
+<h2>Option 3 &mdash; the <code>[bread_mascot]</code> shortcode</h2>
+<p class="kicker">The WordPress-native answer: editors write a tag, the
+server renders the embed. No HTML knowledge required below the fold.</p>
+
+<h3>How it works on a real WordPress site</h3>
+<ol>
+<li>Drop the PHP opposite into <code>wp-content/mu-plugins/bread-mascot.php</code>
+(always-on, no activation) or as a normal plugin &mdash; or paste it as a
+PHP snippet in the WPCode plugin.</li>
+<li>Host <code>live.html</code> once in <code>uploads/bread-mascot/</code>
+(same as option 1).</li>
+<li>Anywhere shortcodes run &mdash; posts, pages, the Text widget, page-
+builder text fields &mdash; write
+<code>[bread_mascot size="380" align="center"]</code>. In PHP templates:
+<code>&lt;?php echo do_shortcode('[bread_mascot]'); ?&gt;</code>.</li>
+</ol>
+<pre><code>&lt;?php
+/*
+Plugin Name:       Bread Mascot (shortcode)
+Description:       Registers [bread_mascot] for the vendor-free mascot.
+Version:           1.0
+*/
+
+// Assumes the file was placed (SFTP) at:
+//   wp-content/uploads/bread-mascot/live.html
+add_shortcode(&#x27;bread_mascot&#x27;, function ($atts) {
+    $a    = shortcode_atts([&#x27;size&#x27; =&gt; 420, &#x27;align&#x27; =&gt; &#x27;center&#x27;], $atts);
+    $url  = esc_url(content_url(&#x27;uploads/bread-mascot/live.html&#x27;));
+    $size = max(160, min(640, intval($a[&#x27;size&#x27;])));
+    return sprintf(
+        &#x27;&lt;div class=&quot;bread-mascot align%s&quot; style=&quot;width:%dpx;max-width:100%%&quot;&gt;&#x27;
+      . &#x27;&lt;iframe src=&quot;%s&quot; title=&quot;Bread mascot&quot; loading=&quot;lazy&quot; &#x27;
+      . &#x27;style=&quot;width:100%%;aspect-ratio:1;border:0;border-radius:20px&quot;&gt;&#x27;
+      . &#x27;&lt;/iframe&gt;&lt;/div&gt;&#x27;,
+        esc_attr($a[&#x27;align&#x27;]), $size, $url);
+});</code></pre>
+<h3>Live simulation</h3>
+<p>GitHub Pages has no PHP, so a ~15-line script performs exactly what
+<code>do_shortcode()</code> would, client-side. The post below contains
+the raw tag; the expansion is the shortcode&rsquo;s output:</p>
+<p><strong>Raw post content:</strong></p>
+<pre><code>Lorem ipsum – the editor typed this into the post:
+
+    [bread_mascot size=&quot;380&quot; align=&quot;center&quot;]
+
+…and WordPress’s do_shortcode() expanded it before the page was sent.</code></pre>
+<div class="demo-frame">
+  <p class="label">Live &mdash; &ldquo;post&rdquo; after shortcode
+  expansion (simulated)</p>
+  <div data-shortcodes>
+  <p>The bread mascot says hello:</p>
+  [bread_mascot size="380" align="center"]
+  <p>&hellip;carrying on with the article as if nothing happened.</p>
+  </div>
+</div>
+
+<h3>Notes</h3>
+<ul>
+<li>The shortcode outputs the option-1 iframe &mdash; deliberately: one
+hosted file, zero JS to manage. A variant can instead enqueue a split
+<code>mascot.js</code> and output a bare <code>&lt;div id&gt;</code>;
+that needs a generator change and cache-plugin exclusions, so start with
+the iframe.</li>
+<li>Because expansion happens server-side, the shortcode also works in
+feeds and with page caches &mdash; unlike a client-side JS replacer.</li>
+</ul>
+
+<div class="verdict">
+<span class="pill good">editors just type a tag</span>
+<span class="pill good">works in posts, widgets, templates</span>
+<span class="pill warn">needs a plugin/mu-plugin (self-hosted or Business plan)</span>
+</div>
+<p class="meta">Posted in <a href="#">Tutorials</a> &mdash; bread mascot embedding series</p></main>
+<aside>
+  <div class="widget"><h2>About this demo</h2>
+    <p style="margin:0">A static site that imitates a WordPress theme to
+    show four ways of embedding the interactive bread mascot. GitHub Pages
+    has no PHP, so wherever real WordPress would run code server-side, the
+    demo says so and simulates it.</p></div>
+  <div class="widget"><h2>The mascot</h2>
+    <ul>
+      <li>One self-contained file, ~104&nbsp;KB</li>
+      <li>No vendor runtime, no CDN, no account</li>
+      <li>Eyes follow the cursor (and get shy)</li>
+      <li>Click the loaf &rarr; chomp, the crate &rarr; Gockel</li>
+      <li>Leave &rarr; he sleeps, return &rarr; startle-wake</li>
+    </ul></div>
+  <div class="widget"><h2>GDPR note</h2>
+    <p style="margin:0">The mascot makes zero third-party requests and
+    processes no data &mdash; embed it on EU sites without a cookie
+    debate.</p></div>
+</aside>
+</div>
+<footer class="site-foot"><div class="wrap">Blissful Ignorance &mdash;
+  WordPress embedding demo &middot; mascot generated by
+  <code>scripts/mascot_js.py</code> (bread-stickers project) &middot;
+  served by GitHub Pages, not WordPress &#128527;</div></footer>
+<script src="assets/corner-mascot.js" defer></script>
+<script src="assets/shortcode-sim.js" defer></script>
+</body></html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Option 4 · corner companion &middot; Blissful Ignorance</title>
+<link rel="stylesheet" href="assets/wp.css">
+</head>
+<body>
+<div class="demo-note">Static demo of <strong>WordPress mascot-embedding methods</strong>. These pages mimic a classic WordPress theme; each option page explains exactly what you would do on a real site.</div>
+<header class="site-head"><div class="wrap">
+  <h1 class="site-title"><a href="index.html">Blissful Ignorance</a></h1>
+  <p class="site-tag">don&rsquo;t worry, be bread</p>
+</div></header>
+<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="option-1-iframe.html">1 &middot; iframe</a><a href="option-2-inline.html">2 &middot; inline</a><a href="option-3-shortcode.html">3 &middot; shortcode</a><a href="option-4-corner.html" class="active">4 &middot; corner</a></div></nav>
+<div class="wrap cols">
+<main>
+<article>
+<h2>Option 4 &mdash; the site-wide corner companion</h2>
+<p class="kicker">One script include, and every page of the site gets a
+loaf sitting bottom-right. It is option 1&rsquo;s iframe, placed by JS
+instead of by hand.</p>
+
+<h3>How it works on a real WordPress site</h3>
+<ol>
+<li>Put <code>bread-corner-mascot.js</code> (shown opposite) in your child
+theme, or paste its contents into a WPCode &ldquo;HTML&rdquo; snippet set
+to <em>Run everywhere on the front end</em>.</li>
+<li>Enqueue it (or let the snippet print it) &mdash; it appends the fixed
+corner iframe after the page loads.</li>
+<li>Host <code>live.html</code> as in option 1; the script points at it.</li>
+</ol>
+<pre><code>assets/corner-mascot.js  (this very demo uses it — look bottom-right)
+  · injects a fixed 200px iframe (130px on phones)
+  · dismiss button remembered via sessionStorage
+  · resolves mascot/live.html relative to itself (Pages-safe)</code></pre><pre><code>&lt;?php
+// child-theme functions.php — enqueue the companion on every page
+add_action(&#x27;wp_enqueue_scripts&#x27;, function () {
+    wp_enqueue_script(&#x27;bread-corner&#x27;,
+        get_stylesheet_directory_uri() . &#x27;/bread-corner-mascot.js&#x27;,
+        array(), &#x27;1.0&#x27;,
+        array(&#x27;strategy&#x27; =&gt; &#x27;defer&#x27;));   // loads after the page paints
+});</code></pre>
+<div class="demo-frame">
+  <p class="label">Live &mdash; the companion is running on every page of
+  this demo. Dismiss it, then bring it back:</p>
+  <p><button type="button" id="bring-back" style="padding:8px 16px;
+     border-radius:8px;border:1px solid var(--line);background:#fff;
+     cursor:pointer">re-enable the corner mascot</button>
+     <span id="corner-state" style="color:var(--soft);font-size:13px"></span></p>
+</div>
+
+<h3>Etiquette (why there is a &times; button)</h3>
+<ul>
+<li>A pet that cannot be shooed is a stain. Dismiss &rarr; remembered for
+the session via <code>sessionStorage</code>.</li>
+<li>Small on mobile (130&nbsp;px), <code>loading="lazy"</code>, and a
+modest <code>z-index</code> so cookie banners and modals stay on top.</li>
+<li>Consider showing it only on the front page or blog posts &mdash; a
+checkout page is not a terrarium.</li>
+</ul>
+
+<div class="verdict">
+<span class="pill good">one include, every page</span>
+<span class="pill good">dismissable, mobile-aware</span>
+<span class="pill warn">needs script access (self-hosted / Business plan)</span>
+</div>
+
+<script>
+document.getElementById('bring-back').addEventListener('click', function () {
+  sessionStorage.removeItem('breadMascotDismissed');
+  location.reload();
+});
+document.getElementById('corner-state').textContent =
+  document.getElementById('bread-corner')
+    ? 'currently visible' : 'currently dismissed (session only)';
+</script>
+<p class="meta">Posted in <a href="#">Tutorials</a> &mdash; bread mascot embedding series</p></main>
+<aside>
+  <div class="widget"><h2>About this demo</h2>
+    <p style="margin:0">A static site that imitates a WordPress theme to
+    show four ways of embedding the interactive bread mascot. GitHub Pages
+    has no PHP, so wherever real WordPress would run code server-side, the
+    demo says so and simulates it.</p></div>
+  <div class="widget"><h2>The mascot</h2>
+    <ul>
+      <li>One self-contained file, ~104&nbsp;KB</li>
+      <li>No vendor runtime, no CDN, no account</li>
+      <li>Eyes follow the cursor (and get shy)</li>
+      <li>Click the loaf &rarr; chomp, the crate &rarr; Gockel</li>
+      <li>Leave &rarr; he sleeps, return &rarr; startle-wake</li>
+    </ul></div>
+  <div class="widget"><h2>GDPR note</h2>
+    <p style="margin:0">The mascot makes zero third-party requests and
+    processes no data &mdash; embed it on EU sites without a cookie
+    debate.</p></div>
+</aside>
+</div>
+<footer class="site-foot"><div class="wrap">Blissful Ignorance &mdash;
+  WordPress embedding demo &middot; mascot generated by
+  <code>scripts/mascot_js.py</code> (bread-stickers project) &middot;
+  served by GitHub Pages, not WordPress &#128527;</div></footer>
+<script src="assets/corner-mascot.js" defer></script>
+</body></html>
