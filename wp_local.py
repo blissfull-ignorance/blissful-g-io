@@ -43,9 +43,11 @@ COMPOSE = ["docker", "compose", "-f", os.path.join(HERE, "wp",
 WP = "blissful-wp"
 PORT = 8765
 URL = "http://127.0.0.1:%d" % PORT
-FRAGMENT_URL = ("https://blissfull-ignorance.github.io/blissful-g-io/"
-                "embedding.html")
+ORIGIN = "https://blissfull-ignorance.github.io/blissful-g-io"
+FRAGMENT_URL = ORIGIN + "/embedding.html"
+WIDGET_URL = ORIGIN + "/mascot-widget.js"
 SLUG = "bread-mascot-inline"
+CORNER_SLUG = "mascot-in-corner"
 
 
 def run(cmd, **kw):
@@ -139,6 +141,9 @@ add_filter( 'run_wptexturize', '__return_false' );
         "--title=Blissful Ignorance — local WordPress PoC",
         "--admin_user=admin", "--admin_password=breadcrumb",
         "--admin_email=demo@example.invalid", "--skip-email", "--allow-root"])
+    # pretty permalinks, so /mascot-in-corner/ resolves as a page
+    sh(["docker", "exec", WP, "wp", "rewrite", "structure",
+        "/%postname%/", "--allow-root"])
 
 
 def fetch_fragment(path=None):
@@ -185,6 +190,58 @@ def inject_page(fragment):
     print("front page id:", r.stdout.strip())
 
 
+def inject_corner_page():
+    """The zero-custom-code demonstration: a page whose ENTIRE mascot
+    integration is one external <script> tag pointing at our github.io.
+    No theme edits, no plugin, no PHP, no inline JS in the content — so
+    not even the formatting mu-plugin is needed for this route."""
+    content = (
+        "<p><em>This page is the one-line integration: the mascot in the "
+        "corner is added by a single external script tag — no theme edit, "
+        "no plugin, no PHP. He sits <strong>behind</strong> this text and "
+        "his eyes follow your mouse across the whole page; click him "
+        "through a word and he chomps.</em></p>\n"
+        "<p>Scroll a little: the article card passes behind him without "
+        "ever trapping him. The script tag at the end of this page "
+        "content is the complete installation — view the page source in "
+        "wp-admin to see it.</p>\n"
+        "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed "
+        "do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+        "Ut enim ad minim veniam, quis nostrud exercitation ullamco "
+        "laboris nisi ut aliquip ex ea commodo consequat.</p>\n"
+        "<p>Duis aute irure dolor in reprehenderit in voluptate velit "
+        "esse cillum dolore eu fugiat nulla pariatur. Excepteur sint "
+        "occaecat cupidatat non proident, sunt in culpa qui officia "
+        "deserunt mollit anim id est laborum.</p>\n"
+        "<p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem "
+        "accusantium doloremque laudantium, totam rem aperiam, eaque ipsa "
+        "quae ab illo inventore veritatis et quasi architecto beatae "
+        "dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas "
+        "sit aspernatur aut odit aut fugit, sed quia consequuntur magni "
+        "dolores eos qui ratione voluptatem sequi nesciunt.</p>\n"
+        "<p>Neque porro quisquam est, qui dolorem ipsum quia dolor sit "
+        "amet, consectetur, adipisci velit, sed quia non numquam eius "
+        "modi tempora incidunt ut labore et dolore magnam aliquam "
+        "quaerat voluptatem.</p>\n"
+        '<script src="%s" defer></script>' % WIDGET_URL)
+    tmp = os.path.join(HERE, ".corner-post.html")
+    open(tmp, "w", encoding="utf-8").write(content)
+    sh(["docker", "cp", tmp, WP + ":/tmp/corner-post.html"])
+    os.remove(tmp)
+    php = (
+        "$c=file_get_contents('/tmp/corner-post.html');"
+        "$p=get_page_by_path('%s');"
+        "$id=wp_insert_post(array("
+        "'ID'=> $p ? $p->ID : 0,"
+        "'post_title'=>'Mascot-in-corner','post_name'=>'%s',"
+        "'post_type'=>'page','post_status'=>'publish','post_content'=>$c));"
+        "if(is_wp_error($id)){echo $id->get_error_message();exit(1);}"
+        "echo $id;" % (CORNER_SLUG, CORNER_SLUG))
+    r = sh(["docker", "exec", WP, "wp", "eval", php, "--allow-root"],
+           capture_output=True, text=True)
+    print("Mascot-in-corner page id:", r.stdout.strip())
+
+
 def down(fresh=False):
     sh(COMPOSE + (["down", "-v"] if fresh else ["stop"]))
     print("stack stopped" + (" (database wiped)" if fresh else "") + ".")
@@ -199,7 +256,15 @@ def main():
     ap.add_argument("--fragment-file", metavar="HTML",
                     help="take the inline fragment from a local page "
                          "(default: fetch the published github.io demo)")
+    ap.add_argument("--origin", metavar="URL", default=ORIGIN,
+                    help="where the demo lives: source of the fragment "
+                         "and of mascot-widget.js (default: the published "
+                         "site; for local dev pass e.g. "
+                         "http://127.0.0.1:8080 served by serve.py)")
     a = ap.parse_args()
+    global FRAGMENT_URL, WIDGET_URL
+    FRAGMENT_URL = a.origin.rstrip("/") + "/embedding.html"
+    WIDGET_URL = a.origin.rstrip("/") + "/mascot-widget.js"
 
     if a.down:
         down(fresh=a.fresh)
@@ -215,17 +280,19 @@ def main():
     ensure_wp_cli()
     install_wordpress()
     inject_page(fetch_fragment(a.fragment_file))
+    inject_corner_page()
     print("""
 ──────────────────────────────────────────────────────────────
   REAL WordPress with PHP is up:
     front page (mascot inline, method 2):  %s/
+    Mascot-in-corner (one-line widget):    %s/%s/
     wp-admin:                              %s/wp-admin/
     login:                                 admin / breadcrumb
-  The inline fragment came from the published demo:
+  The inline fragment came from:
     %s
   Stop with:  python3 wp_local.py --down
 ──────────────────────────────────────────────────────────────""" %
-          (URL, URL, FRAGMENT_URL))
+          (URL, URL, CORNER_SLUG, URL, FRAGMENT_URL))
 
 
 if __name__ == "__main__":

@@ -14,7 +14,38 @@ its eyes follow the mouse across the whole page.
 |---|---|
 | [`index.html`](index.html) | overview + live preview |
 | [`embedding.html`](embedding.html) | **Embedding, methods 1–4**, each explained + live: 1 iframe · 2 inline (the real fragment, spliced from the actual mascot file at build time) · 3 `[bread_mascot]` shortcode (PHP shown, `do_shortcode()` simulated client-side — Pages has no PHP) · 4 site-wide corner companion (`assets/corner-mascot.js`, active on every page, dismissible) |
-| [`overlay.html`](overlay.html) | **Overlay**: the mascot fixed in the lower-right corner *behind* the blog text, gaze tracking the cursor over the entire page, clicks on the text above him still chomp. Method 1 + `pointer-events:none` + a postMessage bridge; includes a z-index toggle to compare behind/in-front |
+| [`overlay.html`](overlay.html) | **Overlay**: the mascot fixed in the lower-right corner *behind* the blog text, gaze tracking the cursor over the entire page, clicks on the text above him still chomp. Method 1 + `pointer-events:none` + a postMessage bridge; a tracked round "window" in the card keeps him from looking stuck; z-toggle compares behind/in-front. Includes the **zero-maintenance route**: one external `<script>` tag (`mascot-widget.js`) |
+| [`local-wp.html`](local-wp.html) | **Local WordPress**: documents `wp_local.py` — real WordPress with PHP on localhost, the proof chain, the wpautop/wptexturize caveat, script reference |
+
+## Development loop (localhost-first, few pushes)
+
+Iterate locally; push to Pages only at milestones:
+
+```
+python3 serve.py            # rebuild + serve at http://127.0.0.1:8080
+python3 wp_local.py --origin http://127.0.0.1:8080
+                            # local WP pulls fragment & widget from the
+                            # localhost stand-in instead of github.io
+```
+
+## The one-line widget (`mascot-widget.js`)
+
+Site owners add the overlay mascot by pasting **one line** into a Custom
+HTML block, widget, or the theme's footer-scripts setting — no theme
+edits, no plugin, no PHP, no inline JS in content (so no formatting
+filter can mangle it):
+
+```html
+<script src="https://blissfull-ignorance.github.io/blissful-g-io/mascot-widget.js"
+        defer></script>
+```
+
+Config via data attributes: `data-size`, `data-inset`,
+`data-corner="br|bl|tr|tl"`, `data-front="1"`, `data-raise` (selectors
+lifted above him). The widget loads `mascot/live-overlay.html` from
+next to itself, so updates happen on our side only. The local WP PoC
+ships a **Mascot-in-corner** page whose entire integration is this one
+tag — proof it survives real WordPress untouched.
 
 ## Real WordPress, locally (proof of concept)
 
@@ -40,11 +71,14 @@ mascot/live.html           the mascot: one self-contained file (~104 KB),
                            no vendor runtime, no CDN, no account
 mascot/live-overlay.html   overlay variant = live.html + two append-only
                            patches (transparent CSS + postMessage bridge)
+mascot-widget.js           the one-line external widget (site owners paste
+                           a single <script src> tag)
 assets/wp.css              classic-theme look + overlay frame styles
 assets/corner-mascot.js    method 4 (active on every page but the overlay)
 assets/shortcode-sim.js    method 3's client-side do_shortcode() stand-in
 build_demo.py              regenerates all pages; splices the REAL inline
                            fragment and builds the overlay variant
+serve.py                   localhost stand-in for GitHub Pages (dev loop)
 wp_local.py                local real-WordPress PoC (see above)
 wp/docker-compose.yml      the PoC stack
 ```

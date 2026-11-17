@@ -127,6 +127,30 @@ coordinates are clamped so the gaze saturates at the neck limit instead
 of spinning. Full bridge source: <a href="mascot/live-overlay.html"><code>
 mascot/live-overlay.html</code></a> (bottom of the file).</p>
 
+<h3>The zero-maintenance route: one external script tag</h3>
+<p>Every ingredient above can be pre-packaged. This site serves
+<code>mascot-widget.js</code>: it injects the frame, the CSS and the
+bridge itself, and loads the transparent mascot build from next to
+itself &mdash; the site owner pastes <strong>one line</strong> into a
+Custom HTML block, a widget, or the theme&rsquo;s &ldquo;footer
+scripts&rdquo; setting and never touches code again:</p>
+<pre><code>&lt;script src=&quot;https://blissfull-ignorance.github.io/blissful-g-io/mascot-widget.js&quot;
+        defer&gt;&lt;/script&gt;</code></pre>
+<ul>
+<li><strong>No inline JS enters the page content</strong> &mdash; so
+WordPress&rsquo;s display filters (wpautop, wptexturize) have nothing to
+mangle: this route needs no mu-plugin guard at all.</li>
+<li><strong>Config via data attributes:</strong> <code>data-size</code>,
+<code>data-inset</code>, <code>data-corner="br|bl|tr|tl"</code>,
+<code>data-front="1"</code> (above instead of behind),
+<code>data-raise="article, main"</code> (selectors lifted above him so
+&ldquo;behind&rdquo; works even on themes with unpositioned content).</li>
+<li><strong>Updates are ours:</strong> replace the mascot on this site
+and every embedding site picks it up on next load.</li>
+<li>Works on self-hosted WordPress everywhere; on WordPress.com it
+needs the Business/Commerce plan (scripts are stripped below that).</li>
+</ul>
+
 <h3>On a real WordPress site</h3>
 <ul>
 <li>Host <code>live-overlay.html</code> like method 1; put the frame
