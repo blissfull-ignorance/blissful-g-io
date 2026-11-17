@@ -158,7 +158,8 @@ theme; each section explains what you would do on a real site.</div>
 
 NAV = [("index.html", "Home", ""),
        ("embedding.html", "Embedding (1&ndash;4)", "embed"),
-       ("overlay.html", "Overlay", "overlay")]
+       ("overlay.html", "Overlay", "overlay"),
+       ("local-wp.html", "Local WordPress", "localwp")]
 
 
 def page(fname, title, active, body, extra="", bodyclass="",
@@ -209,9 +210,15 @@ site</strong> while its eyes follow your cursor.</p>
      page, and still chomps when clicked &mdash; built from method 1
      plus <code>pointer-events:none</code> and a postMessage
      bridge.</p></div>
+  <div class="card"><h3><a href="local-wp.html">Local WordPress
+     &mdash; the real thing</a></h3><p>Pages can only imitate WordPress.
+     <code>wp_local.py</code> boots genuine WordPress with PHP on
+     localhost and injects this site&rsquo;s inline fragment into a real
+     <code>wp_insert_post()</code> page &mdash; one command, Docker
+     required.</p></div>
 </div>
 
-<p>Both sections use the same asset family:
+<p>Both embedding and overlay use the same asset family:
 <a href="mascot/live.html"><code>mascot/live.html</code></a> (the plain
 mascot) and <a href="mascot/live-overlay.html"><code>mascot/
 live-overlay.html</code></a> (the transparent overlay variant &mdash; an
@@ -219,13 +226,11 @@ append-only patch of the first, see the Overlay page). Updating the
 mascot after an art change means replacing one file.</p>
 
 <p><strong>Want to see method 2 inside <em>real</em> WordPress?</strong>
-This repo ships <code>wp_local.py</code>: one command
-(<code>python3 wp_local.py</code>, Docker required) boots an actual
-WordPress with PHP on <code>http://127.0.0.1:8765</code> and injects
-this page&rsquo;s inline fragment into a genuine
-<code>wp_insert_post()</code> front page &mdash; fetched live from this
-very URL, so the Pages demo and the WordPress proof run byte-identical
-code.</p>
+The <a href="local-wp.html">Local WordPress</a> section documents
+<code>python3 wp_local.py</code>: it boots an actual WordPress with PHP
+on <code>http://127.0.0.1:8765</code> and fetches the inline fragment
+from this very URL &mdash; so the Pages demo and the WordPress proof run
+byte-identical code.</p>
 """ + META
 page("index.html", "WordPress mascot demo", "", body)
 
@@ -463,7 +468,21 @@ addEventListener('click', function (e) {        // chomp/crate hit-test
 document.documentElement.addEventListener('mouseleave',
   function () { post('leave'); });             // out of the window: sleep
 document.documentElement.addEventListener('mouseenter',
-  function () { post('enter', 0, 0); });       // back: wake with a blink'''
+  function () { post('enter', 0, 0); });       // back: wake with a blink
+
+// optional polish: punch a soft round WINDOW in the content card around
+// the corner so the mascot never looks "stuck behind the card". The card
+// masks a radial hole at (--hx,--hy); we keep those in card-local coords
+// as the page scrolls (133 = frame inset 18 + half of 230px):
+var art = document.querySelector('main article');
+function placeHole() {
+  var r = art.getBoundingClientRect();
+  art.style.setProperty('--hx', (innerWidth  - 133 - r.left) + 'px');
+  art.style.setProperty('--hy', (innerHeight - 133 - r.top)  + 'px');
+}
+placeHole();
+addEventListener('scroll', placeHole, { passive: true });
+addEventListener('resize', placeHole);'''
 
 frame_css = '''
 /* the frame: fixed to the corner, BEHIND the content, click-through */
@@ -497,6 +516,9 @@ on the article (the frame is click-through); the parent hit-tests the
 corner and forwards it.</li>
 <li>Move the mouse <strong>out of the browser window</strong> &rarr; he
 falls asleep. Back in &rarr; wake.</li>
+<li><strong>Scroll</strong> &mdash; the article card slides through his
+round window in the corner; its edge fades around him instead of
+slicing across his face.</li>
 </ul>
 
 <label class="z-toggle"><input type="checkbox" id="zflip"> bring the
@@ -520,10 +542,13 @@ itself:</p>
 <p><strong>2. The frame, pinned to the corner behind everything:</strong></p>
 """ + pre(frame_css) + """
 <p>Your theme&rsquo;s content needs <code>position:relative;
-z-index:1</code> (one CSS line &mdash; on this demo the article card is
-translucent so you can <em>see</em> him through the text; on an opaque
-card he&rsquo;d be hidden, which is also &ldquo;behind&rdquo;, just less
-charming).</p>
+z-index:1</code> &mdash; one CSS line, and he is behind it. To keep that
+from reading as &ldquo;stuck behind a wall&rdquo;, this demo punches a
+soft <strong>round window</strong> in the card around him: the card
+masks a radial hole at <code>(--hx,--hy)</code>, and a few lines of glue
+keep those coordinates centred on the corner as the page scrolls. Text
+that wanders into the window fades politely around him instead of
+slicing across his face.</p>
 <p><strong>3. The postMessage bridge.</strong> Here is the catch: an
 iframe that sits behind the page must be <code>pointer-events:none</code>
 &mdash; otherwise an invisible sheet of glass covers the whole site and
@@ -597,14 +622,137 @@ not a different mascot.</p>
     function () { post('leave'); });
   document.documentElement.addEventListener('mouseenter',
     function () { post('enter', 0, 0); });
+  var art = document.querySelector('main article');
+  function placeHole() {
+    var r = art.getBoundingClientRect();
+    art.style.setProperty('--hx', (innerWidth  - 133 - r.left) + 'px');
+    art.style.setProperty('--hy', (innerHeight - 133 - r.top)  + 'px');
+  }
+  placeHole();
+  addEventListener('scroll', placeHole, { passive: true });
+  addEventListener('resize', placeHole);
   document.getElementById('zflip').addEventListener('change',
     function (e) { f.style.zIndex = e.target.checked ? 60 : 0; });
 })();
 </script>
 """
-# overlay page: full-width, translucent card, no corner companion
+# overlay page: full-width, windowed card, no corner companion
 page("overlay.html", "Overlay — mascot behind the content", "overlay",
      body, bodyclass="overlay-page")
+
+# ============================= local wordpress ===============================
+run_cmd = '''
+git clone https://github.com/blissfull-ignorance/blissful-g-io.git
+cd blissful-g-io
+python3 wp_local.py        # Docker must be running
+
+  ->  front page (mascot inline, method 2):  http://127.0.0.1:8765/
+      wp-admin:                              http://127.0.0.1:8765/wp-admin/
+      login:                                 admin / breadcrumb'''
+
+steps = '''
+1. docker compose up        wordpress:php8.3-apache + MariaDB
+                            (wp/docker-compose.yml, port 8765)
+2. wp-cli (fetched inside the container)
+                            wp core install --url=http://127.0.0.1:8765
+3. GET  https://blissfull-ignorance.github.io/blissful-g-io/
+                        embedding.html   <-- THIS PUBLISHED PAGE
+      extract <div class="bm-inline-host"> ... </div>   (byte-exact)
+4. wp_insert_post( page, post_content = fragment )
+      + show_on_front = that page       (real PHP, real database)
+5. print the URLs. Done. Re-runs are idempotent (page is updated,
+   database kept).'''
+
+mu_php = '''<?php
+/**
+ * Demo guard: the mascot is one self-contained HTML fragment whose inline
+ * <script> must reach the browser byte-exact. WordPress's formatting
+ * filters rewrite post_content on display (wpautop injects <p> tags,
+ * wptexturize escapes "&&" inside scripts), so they are disabled here.
+ * On a real site the same protection is what a Custom HTML block gives
+ * you - it stores raw HTML.
+ */
+foreach ( array( 'wpautop', 'convert_chars', 'convert_smilies' ) as $f ) {
+\tremove_filter( 'the_content', $f );
+}
+add_filter( 'run_wptexturize', '__return_false' );'''
+
+body = """
+<article>
+<h2>Local WordPress &mdash; the demo inside the real thing</h2>
+<p class="kicker">Everything on this site imitates WordPress with static
+HTML, because GitHub Pages has no PHP. This section is about the other
+half: <code>wp_local.py</code>, a ~200-line Python script in the repo
+that boots <strong>genuine WordPress with real PHP</strong> on your
+machine and puts <a href="embedding.html#m2">method 2 (the inline
+embed)</a> into it for real.</p>
+
+<h3>Try it</h3>
+""" + pre(run_cmd) + """
+<div class="demo-frame">
+  <p class="label">What you get</p>
+  <p>A stock WordPress install (default theme, real database, working
+  wp-admin) whose <strong>static front page</strong> is a real
+  <code>wp_insert_post()</code> page containing the mascot&rsquo;s inline
+  fragment &mdash; no iframe, no plugin. Move the mouse, click the loaf:
+  it is the genuine article, server-rendered by WordPress PHP.</p>
+</div>
+
+<h3>The proof-of-concept chain</h3>
+<p>The script does not use a local copy of the fragment. It
+<strong>fetches this published Pages page</strong>, extracts the
+<code>.bm-inline-host</code> div byte-for-byte, and hands those bytes to
+WordPress. Same asset, two delivery worlds &mdash; Pages and real
+WordPress &mdash; verified equal:</p>
+""" + pre(steps) + """
+<h3>What building it revealed (the honest caveat)</h3>
+<p>Inserted raw, the mascot rendered as an empty frame: WordPress
+rewrites <code>post_content</code> <em>on display</em>, and two formatters
+mangle inline scripts &mdash; <code>wpautop</code> injects
+<code>&lt;p&gt;</code> tags into them, and <code>wptexturize</code>
+escapes <code>&amp;&amp;</code> into <code>&amp;#038;&amp;#038;</code>
+(a minimal <code>&lt;script&gt;if (a &lt; 1 &amp;&amp; b)&lt;/script&gt;</code>
+reproduces it). The sneaky part: block themes run
+<code>wptexturize()</code> <strong>directly on the assembled
+template</strong> (<code>get_the_block_template_html()</code>), so
+unhooking it from <code>the_content</code> is not enough &mdash; the
+demo&rsquo;s mu-plugin uses the documented <code>run_wptexturize</code>
+kill-switch as well:</p>
+""" + pre(mu_php) + """
+<p>On a real site you meet the same issue in miniature: a
+<strong>Custom HTML block</strong> stores raw HTML and is the right
+place for the fragment, but the template-level pass still applies on
+block themes &mdash; so keep the two-line guard (mu-plugin or theme
+<code>functions.php</code>) whenever content carries inline JS. Or skip
+the whole class of problems with <a href="overlay.html">the iframe
+overlay</a>: scripts inside an iframe are nobody&rsquo;s content but
+their own.</p>
+
+<h3>Script reference</h3>
+<ul>
+<li><code>python3 wp_local.py</code> &mdash; start / update (idempotent;
+reuses the running stack and the database).</li>
+<li><code>--down</code> &mdash; stop the stack, data kept;
+<code>--down --fresh</code> &mdash; also delete the database volume.</li>
+<li><code>--fresh</code> &mdash; wipe and reinstall in one go.</li>
+<li><code>--fragment-file embedding.html</code> &mdash; take the
+fragment from a local file instead of the live URL (useful offline or
+before a push).</li>
+<li>Requirements: Docker (Desktop or Engine) running, Python&nbsp;3 with
+nothing extra to install, port&nbsp;8765 free. First run pulls ~700&nbsp;MB
+of official images.</li>
+</ul>
+
+<div class="verdict">
+<span class="pill good">real WordPress, real PHP, one command</span>
+<span class="pill good">fragment fetched from the live Pages URL</span>
+<span class="pill good">byte-exact render, verified</span>
+<span class="pill warn">Docker required</span>
+<span class="pill warn">localhost only &mdash; it is a PoC, not hosting</span>
+</div>
+""" + META
+page("local-wp.html", "Local WordPress — real PHP proof of concept",
+     "localwp", body)
 
 # ---- assets -----------------------------------------------------------------
 os.makedirs(os.path.join(HERE, "mascot"), exist_ok=True)

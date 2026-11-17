@@ -14,7 +14,7 @@ theme; each section explains what you would do on a real site.</div>
   <h1 class="site-title"><a href="index.html">Blissful Ignorance</a></h1>
   <p class="site-tag">don&rsquo;t worry, be bread</p>
 </div></header>
-<nav class="site-nav"><div class="wrap"><a href="index.html" class="active">Home</a><a href="embedding.html">Embedding (1&ndash;4)</a><a href="overlay.html">Overlay</a></div></nav>
+<nav class="site-nav"><div class="wrap"><a href="index.html" class="active">Home</a><a href="embedding.html">Embedding (1&ndash;4)</a><a href="overlay.html">Overlay</a><a href="local-wp.html">Local WordPress</a></div></nav>
 <div class="wrap cols">
 <main>
 <article>
@@ -44,9 +44,15 @@ site</strong> while its eyes follow your cursor.</p>
      page, and still chomps when clicked &mdash; built from method 1
      plus <code>pointer-events:none</code> and a postMessage
      bridge.</p></div>
+  <div class="card"><h3><a href="local-wp.html">Local WordPress
+     &mdash; the real thing</a></h3><p>Pages can only imitate WordPress.
+     <code>wp_local.py</code> boots genuine WordPress with PHP on
+     localhost and injects this site&rsquo;s inline fragment into a real
+     <code>wp_insert_post()</code> page &mdash; one command, Docker
+     required.</p></div>
 </div>
 
-<p>Both sections use the same asset family:
+<p>Both embedding and overlay use the same asset family:
 <a href="mascot/live.html"><code>mascot/live.html</code></a> (the plain
 mascot) and <a href="mascot/live-overlay.html"><code>mascot/
 live-overlay.html</code></a> (the transparent overlay variant &mdash; an
@@ -54,13 +60,11 @@ append-only patch of the first, see the Overlay page). Updating the
 mascot after an art change means replacing one file.</p>
 
 <p><strong>Want to see method 2 inside <em>real</em> WordPress?</strong>
-This repo ships <code>wp_local.py</code>: one command
-(<code>python3 wp_local.py</code>, Docker required) boots an actual
-WordPress with PHP on <code>http://127.0.0.1:8765</code> and injects
-this page&rsquo;s inline fragment into a genuine
-<code>wp_insert_post()</code> front page &mdash; fetched live from this
-very URL, so the Pages demo and the WordPress proof run byte-identical
-code.</p>
+The <a href="local-wp.html">Local WordPress</a> section documents
+<code>python3 wp_local.py</code>: it boots an actual WordPress with PHP
+on <code>http://127.0.0.1:8765</code> and fetches the inline fragment
+from this very URL &mdash; so the Pages demo and the WordPress proof run
+byte-identical code.</p>
 <p class="meta">Posted in <a href="#">Tutorials</a> &mdash; bread mascot series</p></main>
 <aside>
   <div class="widget"><h2>About this demo</h2>

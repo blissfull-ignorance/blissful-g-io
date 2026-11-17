@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local WordPress — real PHP proof of concept &middot; Blissful Ignorance</title>
+<link rel="stylesheet" href="assets/wp.css">
+</head>
+<body class="">
+<div class="demo-note">Static demo of <strong>WordPress mascot embedding
+&amp; overlay techniques</strong>. These pages mimic a classic WordPress
+theme; each section explains what you would do on a real site.</div>
+<header class="site-head"><div class="wrap">
+  <h1 class="site-title"><a href="index.html">Blissful Ignorance</a></h1>
+  <p class="site-tag">don&rsquo;t worry, be bread</p>
+</div></header>
+<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="embedding.html">Embedding (1&ndash;4)</a><a href="overlay.html">Overlay</a><a href="local-wp.html" class="active">Local WordPress</a></div></nav>
+<div class="wrap cols">
+<main>
+<article>
+<h2>Local WordPress &mdash; the demo inside the real thing</h2>
+<p class="kicker">Everything on this site imitates WordPress with static
+HTML, because GitHub Pages has no PHP. This section is about the other
+half: <code>wp_local.py</code>, a ~200-line Python script in the repo
+that boots <strong>genuine WordPress with real PHP</strong> on your
+machine and puts <a href="embedding.html#m2">method 2 (the inline
+embed)</a> into it for real.</p>
+
+<h3>Try it</h3>
+<pre><code>git clone https://github.com/blissfull-ignorance/blissful-g-io.git
+cd blissful-g-io
+python3 wp_local.py        # Docker must be running
+
+  -&gt;  front page (mascot inline, method 2):  http://127.0.0.1:8765/
+      wp-admin:                              http://127.0.0.1:8765/wp-admin/
+      login:                                 admin / breadcrumb</code></pre>
+<div class="demo-frame">
+  <p class="label">What you get</p>
+  <p>A stock WordPress install (default theme, real database, working
+  wp-admin) whose <strong>static front page</strong> is a real
+  <code>wp_insert_post()</code> page containing the mascot&rsquo;s inline
+  fragment &mdash; no iframe, no plugin. Move the mouse, click the loaf:
+  it is the genuine article, server-rendered by WordPress PHP.</p>
+</div>
+
+<h3>The proof-of-concept chain</h3>
+<p>The script does not use a local copy of the fragment. It
+<strong>fetches this published Pages page</strong>, extracts the
+<code>.bm-inline-host</code> div byte-for-byte, and hands those bytes to
+WordPress. Same asset, two delivery worlds &mdash; Pages and real
+WordPress &mdash; verified equal:</p>
+<pre><code>1. docker compose up        wordpress:php8.3-apache + MariaDB
+                            (wp/docker-compose.yml, port 8765)
+2. wp-cli (fetched inside the container)
+                            wp core install --url=http://127.0.0.1:8765
+3. GET  https://blissfull-ignorance.github.io/blissful-g-io/
+                        embedding.html   &lt;-- THIS PUBLISHED PAGE
+      extract &lt;div class=&quot;bm-inline-host&quot;&gt; ... &lt;/div&gt;   (byte-exact)
+4. wp_insert_post( page, post_content = fragment )
+      + show_on_front = that page       (real PHP, real database)
+5. print the URLs. Done. Re-runs are idempotent (page is updated,
+   database kept).</code></pre>
+<h3>What building it revealed (the honest caveat)</h3>
+<p>Inserted raw, the mascot rendered as an empty frame: WordPress
+rewrites <code>post_content</code> <em>on display</em>, and two formatters
+mangle inline scripts &mdash; <code>wpautop</code> injects
+<code>&lt;p&gt;</code> tags into them, and <code>wptexturize</code>
+escapes <code>&amp;&amp;</code> into <code>&amp;#038;&amp;#038;</code>
+(a minimal <code>&lt;script&gt;if (a &lt; 1 &amp;&amp; b)&lt;/script&gt;</code>
+reproduces it). The sneaky part: block themes run
+<code>wptexturize()</code> <strong>directly on the assembled
+template</strong> (<code>get_the_block_template_html()</code>), so
+unhooking it from <code>the_content</code> is not enough &mdash; the
+demo&rsquo;s mu-plugin uses the documented <code>run_wptexturize</code>
+kill-switch as well:</p>
+<pre><code>&lt;?php
+/**
+ * Demo guard: the mascot is one self-contained HTML fragment whose inline
+ * &lt;script&gt; must reach the browser byte-exact. WordPress&#x27;s formatting
+ * filters rewrite post_content on display (wpautop injects &lt;p&gt; tags,
+ * wptexturize escapes &quot;&amp;&amp;&quot; inside scripts), so they are disabled here.
+ * On a real site the same protection is what a Custom HTML block gives
+ * you - it stores raw HTML.
+ */
+foreach ( array( &#x27;wpautop&#x27;, &#x27;convert_chars&#x27;, &#x27;convert_smilies&#x27; ) as $f ) {
+	remove_filter( &#x27;the_content&#x27;, $f );
+}
+add_filter( &#x27;run_wptexturize&#x27;, &#x27;__return_false&#x27; );</code></pre>
+<p>On a real site you meet the same issue in miniature: a
+<strong>Custom HTML block</strong> stores raw HTML and is the right
+place for the fragment, but the template-level pass still applies on
+block themes &mdash; so keep the two-line guard (mu-plugin or theme
+<code>functions.php</code>) whenever content carries inline JS. Or skip
+the whole class of problems with <a href="overlay.html">the iframe
+overlay</a>: scripts inside an iframe are nobody&rsquo;s content but
+their own.</p>
+
+<h3>Script reference</h3>
+<ul>
+<li><code>python3 wp_local.py</code> &mdash; start / update (idempotent;
+reuses the running stack and the database).</li>
+<li><code>--down</code> &mdash; stop the stack, data kept;
+<code>--down --fresh</code> &mdash; also delete the database volume.</li>
+<li><code>--fresh</code> &mdash; wipe and reinstall in one go.</li>
+<li><code>--fragment-file embedding.html</code> &mdash; take the
+fragment from a local file instead of the live URL (useful offline or
+before a push).</li>
+<li>Requirements: Docker (Desktop or Engine) running, Python&nbsp;3 with
+nothing extra to install, port&nbsp;8765 free. First run pulls ~700&nbsp;MB
+of official images.</li>
+</ul>
+
+<div class="verdict">
+<span class="pill good">real WordPress, real PHP, one command</span>
+<span class="pill good">fragment fetched from the live Pages URL</span>
+<span class="pill good">byte-exact render, verified</span>
+<span class="pill warn">Docker required</span>
+<span class="pill warn">localhost only &mdash; it is a PoC, not hosting</span>
+</div>
+<p class="meta">Posted in <a href="#">Tutorials</a> &mdash; bread mascot series</p></main>
+<aside>
+  <div class="widget"><h2>About this demo</h2>
+    <p style="margin:0">A static site imitating a WordPress theme. Where
+    real WordPress would run PHP server-side, the demo says so and
+    simulates it (GitHub Pages has no PHP).</p></div>
+  <div class="widget"><h2>The mascot</h2>
+    <ul>
+      <li>One self-contained file, ~104&nbsp;KB</li>
+      <li>No vendor runtime, no CDN, no account</li>
+      <li>Eyes follow the cursor (and get shy)</li>
+      <li>Click the loaf &rarr; chomp, the crate &rarr; Gockel</li>
+      <li>Leave &rarr; he sleeps, return &rarr; startle-wake</li>
+    </ul></div>
+  <div class="widget"><h2>GDPR note</h2>
+    <p style="margin:0">Zero third-party requests, stores nothing &mdash;
+    GDPR-clean by construction.</p></div>
+</aside>
+</div>
+<footer class="site-foot"><div class="wrap">Blissful Ignorance &mdash;
+  WordPress embedding &amp; overlay demo &middot; mascot generated by
+  <code>scripts/mascot_js.py</code> (bread-stickers project) &middot;
+  served by GitHub Pages, not WordPress &#128527;</div></footer>
+<script src="assets/corner-mascot.js" defer></script>
+</body></html>

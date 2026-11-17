@@ -14,7 +14,7 @@ theme; each section explains what you would do on a real site.</div>
   <h1 class="site-title"><a href="index.html">Blissful Ignorance</a></h1>
   <p class="site-tag">don&rsquo;t worry, be bread</p>
 </div></header>
-<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="embedding.html">Embedding (1&ndash;4)</a><a href="overlay.html" class="active">Overlay</a></div></nav>
+<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="embedding.html">Embedding (1&ndash;4)</a><a href="overlay.html" class="active">Overlay</a><a href="local-wp.html">Local WordPress</a></div></nav>
 <div class="wrap cols">
 <main>
 <article>
@@ -38,6 +38,9 @@ on the article (the frame is click-through); the parent hit-tests the
 corner and forwards it.</li>
 <li>Move the mouse <strong>out of the browser window</strong> &rarr; he
 falls asleep. Back in &rarr; wake.</li>
+<li><strong>Scroll</strong> &mdash; the article card slides through his
+round window in the corner; its edge fades around him instead of
+slicing across his face.</li>
 </ul>
 
 <label class="z-toggle"><input type="checkbox" id="zflip"> bring the
@@ -67,10 +70,13 @@ itself:</p>
   z-index: 0;             /* content sits at z-index:1 =&gt; he is behind */
 }</code></pre>
 <p>Your theme&rsquo;s content needs <code>position:relative;
-z-index:1</code> (one CSS line &mdash; on this demo the article card is
-translucent so you can <em>see</em> him through the text; on an opaque
-card he&rsquo;d be hidden, which is also &ldquo;behind&rdquo;, just less
-charming).</p>
+z-index:1</code> &mdash; one CSS line, and he is behind it. To keep that
+from reading as &ldquo;stuck behind a wall&rdquo;, this demo punches a
+soft <strong>round window</strong> in the card around him: the card
+masks a radial hole at <code>(--hx,--hy)</code>, and a few lines of glue
+keep those coordinates centred on the corner as the page scrolls. Text
+that wanders into the window fades politely around him instead of
+slicing across his face.</p>
 <p><strong>3. The postMessage bridge.</strong> Here is the catch: an
 iframe that sits behind the page must be <code>pointer-events:none</code>
 &mdash; otherwise an invisible sheet of glass covers the whole site and
@@ -98,7 +104,21 @@ addEventListener(&#x27;click&#x27;, function (e) {        // chomp/crate hit-tes
 document.documentElement.addEventListener(&#x27;mouseleave&#x27;,
   function () { post(&#x27;leave&#x27;); });             // out of the window: sleep
 document.documentElement.addEventListener(&#x27;mouseenter&#x27;,
-  function () { post(&#x27;enter&#x27;, 0, 0); });       // back: wake with a blink</code></pre>
+  function () { post(&#x27;enter&#x27;, 0, 0); });       // back: wake with a blink
+
+// optional polish: punch a soft round WINDOW in the content card around
+// the corner so the mascot never looks &quot;stuck behind the card&quot;. The card
+// masks a radial hole at (--hx,--hy); we keep those in card-local coords
+// as the page scrolls (133 = frame inset 18 + half of 230px):
+var art = document.querySelector(&#x27;main article&#x27;);
+function placeHole() {
+  var r = art.getBoundingClientRect();
+  art.style.setProperty(&#x27;--hx&#x27;, (innerWidth  - 133 - r.left) + &#x27;px&#x27;);
+  art.style.setProperty(&#x27;--hy&#x27;, (innerHeight - 133 - r.top)  + &#x27;px&#x27;);
+}
+placeHole();
+addEventListener(&#x27;scroll&#x27;, placeHole, { passive: true });
+addEventListener(&#x27;resize&#x27;, placeHole);</code></pre>
 <p>Inside the frame, a ~20-line listener turns those messages back into
 synthetic <code>pointermove / pointerenter / pointerleave / click</code>
 events on the stage &mdash; the mascot&rsquo;s own harness reads only
@@ -165,6 +185,15 @@ not a different mascot.</p>
     function () { post('leave'); });
   document.documentElement.addEventListener('mouseenter',
     function () { post('enter', 0, 0); });
+  var art = document.querySelector('main article');
+  function placeHole() {
+    var r = art.getBoundingClientRect();
+    art.style.setProperty('--hx', (innerWidth  - 133 - r.left) + 'px');
+    art.style.setProperty('--hy', (innerHeight - 133 - r.top)  + 'px');
+  }
+  placeHole();
+  addEventListener('scroll', placeHole, { passive: true });
+  addEventListener('resize', placeHole);
   document.getElementById('zflip').addEventListener('change',
     function (e) { f.style.zIndex = e.target.checked ? 60 : 0; });
 })();
