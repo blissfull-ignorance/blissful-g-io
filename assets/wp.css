@@ -101,15 +101,16 @@ iframe.mascot{display:block;margin:0 auto;border:0;border-radius:20px;
   margin-top:4px}
 @media(max-width:640px){#bread-corner{width:130px;right:10px;bottom:10px}}
 
-/* overlay page (section 2): mascot frame BEHIND the content, click-through */
+/* overlay page (section 2): mascot frame as the TOPMOST layer,
+   click-through; the .windowed card variant is the opt-in "behind" mode */
 #overlay-mascot{position:fixed;right:18px;bottom:18px;
   width:230px;height:230px;border:0;border-radius:22px;
-  background:transparent;pointer-events:none;z-index:0}
+  background:transparent;pointer-events:none;z-index:60}
 .overlay-page .cols{grid-template-columns:minmax(0,1fr);max-width:860px}
-/* opaque card like a real theme, with a soft round WINDOW punched around
-   the corner mascot (--hx/--hy are tracked by the overlay glue script),
-   so he reads as "behind the page", not "stuck behind fog" */
-.overlay-page main article{position:relative;z-index:1;background:#fff;
+.overlay-page main article{position:relative;z-index:1;background:#fff}
+/* opaque card with a soft round WINDOW punched around the corner mascot
+   (--hx/--hy tracked by the overlay glue script) - only in behind-mode */
+.overlay-page main article.windowed{z-index:1;
   --hx:-500px;--hy:-500px;
   -webkit-mask:radial-gradient(175px 175px at var(--hx) var(--hy),
       transparent 58%, #000 100%);

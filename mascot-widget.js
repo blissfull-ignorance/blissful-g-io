@@ -19,10 +19,12 @@
  *   data-size="230"          frame edge length in px
  *   data-inset="18"          distance from the corner, px
  *   data-corner="br"         br | bl | tr | tl
- *   data-front="0"           1 = draw above the content instead of behind
+ *   data-front="1"           topmost layer (the default); "0" = behind
+ *                            the content
  *   data-raise="article, main"
- *                            selectors lifted above him so "behind" works
- *                            even on themes without positioned content
+ *                            selectors lifted above him in behind mode
+ *                            (so "behind" works even on themes without
+ *                            positioned content)
  *
  * The mascot: https://blissfull-ignorance.github.io/blissful-g-io/
  * (bread-stickers project, vendor-free single-file build).
@@ -43,7 +45,7 @@
   var size  = Math.max(120, Math.min(420, +attr('size', 230)));
   var inset = Math.max(0, +attr('inset', 18));
   var corner = (/^(br|bl|tr|tl)$/).test(attr('corner', 'br')) ? attr('corner', 'br') : 'br';
-  var front  = attr('front', '0') === '1';
+  var front  = attr('front', '1') !== '0';
   var raise  = attr('raise', 'article, main');
 
   // the transparent mascot build lives in mascot/ next to this script

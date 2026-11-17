@@ -188,7 +188,7 @@ body = """
 <p class="kicker">The mascot is one self-contained HTML file: scene data,
 art and a ~200-line animation core, no dependencies. This demo covers
 both jobs you might want it to do &mdash; <strong>sitting inside a
-page</strong> four different ways, and <strong>floating behind the whole
+page</strong> four different ways, and <strong>floating over the whole
 site</strong> while its eyes follow your cursor.</p>
 
 <div class="demo-frame">
@@ -204,12 +204,13 @@ site</strong> while its eyes follow your cursor.</p>
      From &ldquo;copy-paste one block&rdquo; to &ldquo;20-line
      plugin&rdquo;, each with a live demo and the real-WP
      instructions.</p></div>
-  <div class="card"><h3><a href="overlay.html">Overlay &mdash; behind
-     the content</a></h3><p>The mascot lives in the lower-right corner
-     <em>behind</em> your blog text, follows the mouse across the entire
-     page, and still chomps when clicked &mdash; built from method 1
-     plus <code>pointer-events:none</code> and a postMessage
-     bridge.</p></div>
+  <div class="card"><h3><a href="overlay.html">Overlay &mdash; on top
+     of the content</a></h3><p>The mascot floats in the lower-right
+     corner as the <em>topmost layer</em> over your blog text, follows
+     the mouse across the entire page, and still chomps when clicked
+     &mdash; method 1 plus <code>pointer-events:none</code> and a
+     postMessage bridge. A toggle sends him <em>behind</em> the text
+     instead, with a soft window punched in the card.</p></div>
   <div class="card"><h3><a href="local-wp.html">Local WordPress
      &mdash; the real thing</a></h3><p>Pages can only imitate WordPress.
      <code>wp_local.py</code> boots genuine WordPress with PHP on
@@ -430,8 +431,8 @@ body = """
 <p class="kicker">All four embed the same <a href="mascot/live.html"><code>
 mascot/live.html</code></a>. Pick by access level: <strong>no code at
 all</strong> &rarr; method 1 (or 3 once installed); <strong>theme
-control</strong> &rarr; methods 2/4. For the mascot <em>behind</em> your
-content, see <a href="overlay.html">Overlay</a>.</p>
+control</strong> &rarr; methods 2/4. For the mascot <em>on top of</em>
+(or behind) your content, see <a href="overlay.html">Overlay</a>.</p>
 """ + sec1 + "<hr>" + sec2 + "<hr>" + sec3 + "<hr>" + sec4
 page("embedding.html", "Embedding methods 1–4", "embed",
      body.replace("<!--INLINE_FRAGMENT-->", INLINE_FRAGMENT),
@@ -470,10 +471,11 @@ document.documentElement.addEventListener('mouseleave',
 document.documentElement.addEventListener('mouseenter',
   function () { post('enter', 0, 0); });       // back: wake with a blink
 
-// optional polish: punch a soft round WINDOW in the content card around
-// the corner so the mascot never looks "stuck behind the card". The card
-// masks a radial hole at (--hx,--hy); we keep those in card-local coords
-// as the page scrolls (133 = frame inset 18 + half of 230px):
+// optional polish for the BEHIND mode: punch a soft round WINDOW in the
+// content card around the corner so the mascot never looks "stuck behind
+// the card". The card masks a radial hole at (--hx,--hy); we keep those
+// in card-local coords as the page scrolls (133 = frame inset 18 + half
+// of 230px):
 var art = document.querySelector('main article');
 function placeHole() {
   var r = art.getBoundingClientRect();
@@ -485,23 +487,24 @@ addEventListener('scroll', placeHole, { passive: true });
 addEventListener('resize', placeHole);'''
 
 frame_css = '''
-/* the frame: fixed to the corner, BEHIND the content, click-through */
+/* the frame: fixed to the corner, TOPMOST layer, click-through */
 #overlay-mascot{
   position: fixed; right: 18px; bottom: 18px;
   width: 230px; height: 230px;
   border: 0; border-radius: 22px; background: transparent;
   pointer-events: none;   /* the page keeps every mouse event */
-  z-index: 0;             /* content sits at z-index:1 => he is behind */
+  z-index: 60;            /* above text and cards; stay below modals */
 }'''
 
 body = """
 <article>
-<h2>Overlay &mdash; the mascot <em>behind</em> your content</h2>
-<p class="kicker">Wanted: the loaf parked in the lower-right corner,
-sitting <em>behind</em> the blog text, eyes following the mouse wherever
-it goes on the page. Possible with method 1? Yes &mdash; and this very
-page is the demo. Scroll, move your mouse, click a word that happens to
-float over him.</p>
+<h2>Overlay &mdash; the mascot on <em>top</em> of your content</h2>
+<p class="kicker">Wanted: the loaf parked in the lower-right corner as
+the <strong>topmost layer</strong>, floating over the blog text, eyes
+following the mouse wherever it goes on the page. Possible with method
+1? Yes &mdash; and this very page is the demo. Scroll, move your mouse,
+click right on him. (The &ldquo;behind the text&rdquo; look is one
+checkbox away, see below.)</p>
 
 <h3>Try it</h3>
 <ul>
@@ -510,20 +513,21 @@ gaze tracks it across the whole body, corner-bound like a garden gnome
 with a wide neck.</li>
 <li>Bring the cursor <strong>close to him</strong> &rarr; he looks away
 (shy, as designed).</li>
-<li><strong>Click him &mdash; or the text lying on top of him</strong>
-&rarr; chomp. Click the crate &rarr; the Gockel cameos. The click lands
-on the article (the frame is click-through); the parent hit-tests the
-corner and forwards it.</li>
+<li><strong>Click him</strong> &rarr; chomp. Click the crate &rarr; the
+Gockel cameos. The frame is click-through, so the click also reaches
+whatever text lies under him &mdash; the parent hit-tests the corner
+and forwards a copy. The page stays fully usable around and
+underneath him.</li>
 <li>Move the mouse <strong>out of the browser window</strong> &rarr; he
 falls asleep. Back in &rarr; wake.</li>
-<li><strong>Scroll</strong> &mdash; the article card slides through his
-round window in the corner; its edge fades around him instead of
-slicing across his face.</li>
+<li><strong>Scroll</strong> &mdash; paragraphs slide under him, crisp
+on top; nothing to slice, nothing to fog.</li>
 </ul>
 
-<label class="z-toggle"><input type="checkbox" id="zflip"> bring the
-mascot <strong>in front</strong> instead (flips <code>z-index</code>
-&mdash; compare the two looks)</label>
+<label class="z-toggle"><input type="checkbox" id="zflip"> put the
+mascot <strong>behind</strong> the content instead (flips
+<code>z-index</code> and punches the soft window in the card &mdash;
+compare the two looks)</label>
 
 <h3>How it works &mdash; three ingredients</h3>
 <p><strong>1. A transparent variant of the mascot.</strong> The plain
@@ -539,22 +543,25 @@ itself:</p>
   #stage svg > rect{fill:transparent}   /* CSS beats the SVG fill attr */
   h1,p,#rig,#foot{display:none}
 </style>''') + """
-<p><strong>2. The frame, pinned to the corner behind everything:</strong></p>
+<p><strong>2. The frame, pinned to the corner as the topmost
+layer:</strong></p>
 """ + pre(frame_css) + """
-<p>Your theme&rsquo;s content needs <code>position:relative;
-z-index:1</code> &mdash; one CSS line, and he is behind it. To keep that
-from reading as &ldquo;stuck behind a wall&rdquo;, this demo punches a
-soft <strong>round window</strong> in the card around him: the card
-masks a radial hole at <code>(--hx,--hy)</code>, and a few lines of glue
-keep those coordinates centred on the corner as the page scrolls. Text
-that wanders into the window fades politely around him instead of
-slicing across his face.</p>
-<p><strong>3. The postMessage bridge.</strong> Here is the catch: an
-iframe that sits behind the page must be <code>pointer-events:none</code>
-&mdash; otherwise an invisible sheet of glass covers the whole site and
-no link, selection or scroll works anymore. But a click-through iframe
-also receives <em>no mouse events itself</em>, so the mascot would be
-blind. The parent page therefore forwards the pointer:</p>
+<p>That is all &ldquo;on top&rdquo; takes: a high <code>z-index</code>
+&mdash; high enough to beat the theme&rsquo;s stacking, low enough to
+stay under modals and cookie banners. Flip the toggle above to send him
+<em>behind</em> the content instead: his <code>z-index</code> drops to
+0, the card rises to 1, and the demo punches a soft <strong>round
+window</strong> in the card around him (a radial mask at
+<code>(--hx,--hy)</code>, kept centred on the corner as the page
+scrolls) so the text fades politely around him instead of slicing
+across his face.</p>
+<p><strong>3. The postMessage bridge.</strong> Here is the catch &mdash;
+and it applies in <em>both</em> layers: the frame must be
+<code>pointer-events:none</code> &mdash; otherwise an invisible sheet of
+glass sits over the corner and no link, selection or scroll works
+there anymore. But a click-through iframe also receives <em>no mouse
+events itself</em>, so the mascot would be blind. The parent page
+therefore forwards the pointer:</p>
 """ + pre(parent_js) + """
 <p>Inside the frame, a ~20-line listener turns those messages back into
 synthetic <code>pointermove / pointerenter / pointerleave / click</code>
@@ -580,7 +587,7 @@ WordPress&rsquo;s display filters (wpautop, wptexturize) have nothing to
 mangle: this route needs no mu-plugin guard at all.</li>
 <li><strong>Config via data attributes:</strong> <code>data-size</code>,
 <code>data-inset</code>, <code>data-corner="br|bl|tr|tl"</code>,
-<code>data-front="1"</code> (above instead of behind),
+<code>data-front="0"</code> (behind the content instead of topmost),
 <code>data-raise="article, main"</code> (selectors lifted above him so
 &ldquo;behind&rdquo; works even on themes with unpositioned content).</li>
 <li><strong>Updates are ours:</strong> replace the mascot on this site
@@ -597,9 +604,10 @@ want, or the child theme&rsquo;s footer.</li>
 <li><strong>Same-origin not required:</strong> postMessage works
 across origins (lock <code>'*'</code> down to your site&rsquo;s origin
 in production).</li>
-<li><strong>z-index etiquette:</strong> stay below modals and cookie
-banners; if the theme has its own stacking contexts, raise the
-<em>content</em>&rsquo;s z-index rather than fighting with negative
+<li><strong>z-index etiquette:</strong> topmost means above the blog,
+not above everything &mdash; keep him under modals and cookie banners
+(this demo uses 60); if the theme has its own stacking contexts, raise
+his <em>frame&rsquo;s</em> value rather than fighting with negative
 values.</li>
 <li><strong>Touch devices:</strong> there is no hover &mdash; the gaze
 follows drags and taps land the chomps; consider hiding the overlay
@@ -611,8 +619,9 @@ on long pages.</li>
 
 <div class="verdict">
 <span class="pill good">still method 1: one file + one block</span>
-<span class="pill good">page stays 100% interactive</span>
+<span class="pill good">topmost layer, page stays 100% usable</span>
 <span class="pill good">gaze spans the whole page</span>
+<span class="pill good">behind-mode included (window mask)</span>
 <span class="pill warn">needs the transparent variant + ~35 lines of glue</span>
 <span class="pill warn">no hover on touch devices</span>
 </div>
@@ -657,12 +666,16 @@ not a different mascot.</p>
   addEventListener('scroll', placeHole, { passive: true });
   addEventListener('resize', placeHole);
   document.getElementById('zflip').addEventListener('change',
-    function (e) { f.style.zIndex = e.target.checked ? 60 : 0; });
+    function (e) {
+      var behind = e.target.checked;
+      f.style.zIndex = behind ? 0 : 60;
+      art.classList.toggle('windowed', behind);
+    });
 })();
 </script>
 """
 # overlay page: full-width, windowed card, no corner companion
-page("overlay.html", "Overlay — mascot behind the content", "overlay",
+page("overlay.html", "Overlay — mascot on top of the content", "overlay",
      body, bodyclass="overlay-page")
 
 # ============================= local wordpress ===============================
