@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Overlay — mascot behind the content &middot; Blissful Ignorance</title>
+<link rel="stylesheet" href="assets/wp.css">
+</head>
+<body class="overlay-page">
+<div class="demo-note">Static demo of <strong>WordPress mascot embedding
+&amp; overlay techniques</strong>. These pages mimic a classic WordPress
+theme; each section explains what you would do on a real site.</div>
+<header class="site-head"><div class="wrap">
+  <h1 class="site-title"><a href="index.html">Blissful Ignorance</a></h1>
+  <p class="site-tag">don&rsquo;t worry, be bread</p>
+</div></header>
+<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="embedding.html">Embedding (1&ndash;4)</a><a href="overlay.html" class="active">Overlay</a></div></nav>
+<div class="wrap cols">
+<main>
+<article>
+<h2>Overlay &mdash; the mascot <em>behind</em> your content</h2>
+<p class="kicker">Wanted: the loaf parked in the lower-right corner,
+sitting <em>behind</em> the blog text, eyes following the mouse wherever
+it goes on the page. Possible with method 1? Yes &mdash; and this very
+page is the demo. Scroll, move your mouse, click a word that happens to
+float over him.</p>
+
+<h3>Try it</h3>
+<ul>
+<li>Move the cursor <strong>anywhere on this page</strong> &mdash; his
+gaze tracks it across the whole body, corner-bound like a garden gnome
+with a wide neck.</li>
+<li>Bring the cursor <strong>close to him</strong> &rarr; he looks away
+(shy, as designed).</li>
+<li><strong>Click him &mdash; or the text lying on top of him</strong>
+&rarr; chomp. Click the crate &rarr; the Gockel cameos. The click lands
+on the article (the frame is click-through); the parent hit-tests the
+corner and forwards it.</li>
+<li>Move the mouse <strong>out of the browser window</strong> &rarr; he
+falls asleep. Back in &rarr; wake.</li>
+</ul>
+
+<label class="z-toggle"><input type="checkbox" id="zflip"> bring the
+mascot <strong>in front</strong> instead (flips <code>z-index</code>
+&mdash; compare the two looks)</label>
+
+<h3>How it works &mdash; three ingredients</h3>
+<p><strong>1. A transparent variant of the mascot.</strong> The plain
+<code>live.html</code> paints a dark background (CSS <em>and</em> an SVG
+backing rect), which would punch an opaque box into the page. The fix is
+an <strong>append-only patch</strong> &mdash; no surgery on the mascot
+itself:</p>
+<pre><code>&lt;!-- live-overlay.html = live.html + these two appends --&gt;
+&lt;style&gt;
+  html,body{background:transparent}
+  #stage{width:100%;height:100%;background:transparent}
+  #stage svg &gt; rect{fill:transparent}   /* CSS beats the SVG fill attr */
+  h1,p,#rig,#foot{display:none}
+&lt;/style&gt;</code></pre>
+<p><strong>2. The frame, pinned to the corner behind everything:</strong></p>
+<pre><code>/* the frame: fixed to the corner, BEHIND the content, click-through */
+#overlay-mascot{
+  position: fixed; right: 18px; bottom: 18px;
+  width: 230px; height: 230px;
+  border: 0; border-radius: 22px; background: transparent;
+  pointer-events: none;   /* the page keeps every mouse event */
+  z-index: 0;             /* content sits at z-index:1 =&gt; he is behind */
+}</code></pre>
+<p>Your theme&rsquo;s content needs <code>position:relative;
+z-index:1</code> (one CSS line &mdash; on this demo the article card is
+translucent so you can <em>see</em> him through the text; on an opaque
+card he&rsquo;d be hidden, which is also &ldquo;behind&rdquo;, just less
+charming).</p>
+<p><strong>3. The postMessage bridge.</strong> Here is the catch: an
+iframe that sits behind the page must be <code>pointer-events:none</code>
+&mdash; otherwise an invisible sheet of glass covers the whole site and
+no link, selection or scroll works anymore. But a click-through iframe
+also receives <em>no mouse events itself</em>, so the mascot would be
+blind. The parent page therefore forwards the pointer:</p>
+<pre><code>// overlay parent glue (goes in a Custom-HTML block or the same footer
+// enqueue as method 4) — the iframe itself is pointer-events:none, so
+// the page stays fully usable and WE forward the pointer:
+var f = document.getElementById(&#x27;overlay-mascot&#x27;), rect;
+function measure() { rect = f.getBoundingClientRect(); }
+measure(); addEventListener(&#x27;resize&#x27;, measure);
+function post(k, x, y) {
+  f.contentWindow.postMessage({bread: &#x27;mascot&#x27;, k: k, x: x, y: y}, &#x27;*&#x27;);
+}
+f.addEventListener(&#x27;load&#x27;, function () { post(&#x27;enter&#x27;, 0, 0); }); // wake
+addEventListener(&#x27;pointermove&#x27;, function (e) {                    // gaze
+  post(&#x27;move&#x27;, e.clientX - rect.left, e.clientY - rect.top);      // ANYWHERE
+}, {passive: true});
+addEventListener(&#x27;click&#x27;, function (e) {        // chomp/crate hit-test
+  if (e.clientX &gt;= rect.left &amp;&amp; e.clientX &lt;= rect.right &amp;&amp;
+      e.clientY &gt;= rect.top  &amp;&amp; e.clientY &lt;= rect.bottom)
+    post(&#x27;click&#x27;, e.clientX - rect.left, e.clientY - rect.top);   // works
+});                                            // even on text above him
+document.documentElement.addEventListener(&#x27;mouseleave&#x27;,
+  function () { post(&#x27;leave&#x27;); });             // out of the window: sleep
+document.documentElement.addEventListener(&#x27;mouseenter&#x27;,
+  function () { post(&#x27;enter&#x27;, 0, 0); });       // back: wake with a blink</code></pre>
+<p>Inside the frame, a ~20-line listener turns those messages back into
+synthetic <code>pointermove / pointerenter / pointerleave / click</code>
+events on the stage &mdash; the mascot&rsquo;s own harness reads only
+<code>clientX/Y</code>, so it cannot tell the difference. Far-away
+coordinates are clamped so the gaze saturates at the neck limit instead
+of spinning. Full bridge source: <a href="mascot/live-overlay.html"><code>
+mascot/live-overlay.html</code></a> (bottom of the file).</p>
+
+<h3>On a real WordPress site</h3>
+<ul>
+<li>Host <code>live-overlay.html</code> like method 1; put the frame
+markup + parent glue into a WPCode snippet running on the pages you
+want, or the child theme&rsquo;s footer.</li>
+<li><strong>Same-origin not required:</strong> postMessage works
+across origins (lock <code>'*'</code> down to your site&rsquo;s origin
+in production).</li>
+<li><strong>z-index etiquette:</strong> stay below modals and cookie
+banners; if the theme has its own stacking contexts, raise the
+<em>content</em>&rsquo;s z-index rather than fighting with negative
+values.</li>
+<li><strong>Touch devices:</strong> there is no hover &mdash; the gaze
+follows drags and taps land the chomps; consider hiding the overlay
+below a breakpoint, or keep him as a sleeping corner ornament.</li>
+<li><strong>Performance:</strong> one extra rAF loop; fine on any blog.
+<code>loading="lazy"</code> and consider <code>content-visibility</code>
+on long pages.</li>
+</ul>
+
+<div class="verdict">
+<span class="pill good">still method 1: one file + one block</span>
+<span class="pill good">page stays 100% interactive</span>
+<span class="pill good">gaze spans the whole page</span>
+<span class="pill warn">needs the transparent variant + ~35 lines of glue</span>
+<span class="pill warn">no hover on touch devices</span>
+</div>
+
+<p class="meta">Built with the same asset as <a href="embedding.html">
+Embedding 1&ndash;4</a> &mdash; the overlay is a deployment technique,
+not a different mascot.</p>
+</article>
+
+<iframe id="overlay-mascot" src="mascot/live-overlay.html"
+        title="Bread mascot (overlay)" tabindex="-1"
+        aria-hidden="true"></iframe>
+
+<script>
+(function () {
+  var f = document.getElementById('overlay-mascot'), rect;
+  function measure() { rect = f.getBoundingClientRect(); }
+  measure(); addEventListener('resize', measure);
+  function post(k, x, y) {
+    f.contentWindow.postMessage({bread: 'mascot', k: k, x: x, y: y}, '*');
+  }
+  f.addEventListener('load', function () { post('enter', 0, 0); });
+  addEventListener('pointermove', function (e) {
+    post('move', e.clientX - rect.left, e.clientY - rect.top);
+  }, {passive: true});
+  addEventListener('click', function (e) {
+    if (e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top  && e.clientY <= rect.bottom)
+      post('click', e.clientX - rect.left, e.clientY - rect.top);
+  });
+  document.documentElement.addEventListener('mouseleave',
+    function () { post('leave'); });
+  document.documentElement.addEventListener('mouseenter',
+    function () { post('enter', 0, 0); });
+  document.getElementById('zflip').addEventListener('change',
+    function (e) { f.style.zIndex = e.target.checked ? 60 : 0; });
+})();
+</script>
+</main>
+<aside>
+  <div class="widget"><h2>About this demo</h2>
+    <p style="margin:0">A static site imitating a WordPress theme. Where
+    real WordPress would run PHP server-side, the demo says so and
+    simulates it (GitHub Pages has no PHP).</p></div>
+  <div class="widget"><h2>The mascot</h2>
+    <ul>
+      <li>One self-contained file, ~104&nbsp;KB</li>
+      <li>No vendor runtime, no CDN, no account</li>
+      <li>Eyes follow the cursor (and get shy)</li>
+      <li>Click the loaf &rarr; chomp, the crate &rarr; Gockel</li>
+      <li>Leave &rarr; he sleeps, return &rarr; startle-wake</li>
+    </ul></div>
+  <div class="widget"><h2>GDPR note</h2>
+    <p style="margin:0">Zero third-party requests, stores nothing &mdash;
+    GDPR-clean by construction.</p></div>
+</aside>
+</div>
+<footer class="site-foot"><div class="wrap">Blissful Ignorance &mdash;
+  WordPress embedding &amp; overlay demo &middot; mascot generated by
+  <code>scripts/mascot_js.py</code> (bread-stickers project) &middot;
+  served by GitHub Pages, not WordPress &#128527;</div></footer>
+<script src="assets/corner-mascot.js" defer></script>
+</body></html>

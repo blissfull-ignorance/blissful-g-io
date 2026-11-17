@@ -13,6 +13,8 @@
 (function () {
   'use strict';
   if (sessionStorage.getItem('breadMascotDismissed') === '1') return;
+  // the Overlay page owns the lower-right corner itself — stand down
+  if (document.body.classList.contains('overlay-page')) return;
 
   // resolve mascot/live.html relative to this script, so the demo works
   // from any Pages base-path

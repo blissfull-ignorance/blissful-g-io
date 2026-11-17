@@ -100,3 +100,18 @@ iframe.mascot{display:block;margin:0 auto;border:0;border-radius:20px;
 #bread-corner .tip{font-size:10.5px;color:var(--soft);text-align:center;
   margin-top:4px}
 @media(max-width:640px){#bread-corner{width:130px;right:10px;bottom:10px}}
+
+/* overlay page (section 2): mascot frame BEHIND the content, click-through */
+#overlay-mascot{position:fixed;right:18px;bottom:18px;
+  width:230px;height:230px;border:0;border-radius:22px;
+  background:transparent;pointer-events:none;z-index:0}
+.overlay-page .cols{grid-template-columns:minmax(0,1fr);max-width:860px}
+.overlay-page main article{position:relative;z-index:1;
+  background:rgba(255,255,255,.82);backdrop-filter:blur(1px)}
+.overlay-page aside{display:none}
+.z-toggle{display:inline-flex;gap:8px;align-items:center;cursor:pointer;
+  background:#f6f6f7;border:1px solid var(--line);border-radius:8px;
+  padding:8px 14px;margin:6px 0 18px;font-size:14px}
+.rec{display:inline-block;vertical-align:middle;margin-left:8px;
+  border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;
+  background:#edfaef;color:#1a7f37;border:1px solid #a5d7b3}

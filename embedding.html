@@ -3,45 +3,90 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Option 2 · inline embed &middot; Blissful Ignorance</title>
+<title>Embedding methods 1–4 &middot; Blissful Ignorance</title>
 <link rel="stylesheet" href="assets/wp.css">
 </head>
-<body>
-<div class="demo-note">Static demo of <strong>WordPress mascot-embedding methods</strong>. These pages mimic a classic WordPress theme; each option page explains exactly what you would do on a real site.</div>
+<body class="">
+<div class="demo-note">Static demo of <strong>WordPress mascot embedding
+&amp; overlay techniques</strong>. These pages mimic a classic WordPress
+theme; each section explains what you would do on a real site.</div>
 <header class="site-head"><div class="wrap">
   <h1 class="site-title"><a href="index.html">Blissful Ignorance</a></h1>
   <p class="site-tag">don&rsquo;t worry, be bread</p>
 </div></header>
-<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="option-1-iframe.html">1 &middot; iframe</a><a href="option-2-inline.html" class="active">2 &middot; inline</a><a href="option-3-shortcode.html">3 &middot; shortcode</a><a href="option-4-corner.html">4 &middot; corner</a></div></nav>
+<nav class="site-nav"><div class="wrap"><a href="index.html">Home</a><a href="embedding.html" class="active">Embedding (1&ndash;4)</a><a href="overlay.html">Overlay</a></div></nav>
 <div class="wrap cols">
 <main>
 <article>
-<h2>Option 2 &mdash; the inline embed (no iframe)</h2>
-<p class="kicker">The mascot lives <em>in</em> the page document: same DOM,
-same paint, no frame. Blends into layouts an iframe can&rsquo;t.</p>
+<h2>Embedding &mdash; four methods, one file</h2>
+<p class="kicker">All four embed the same <a href="mascot/live.html"><code>
+mascot/live.html</code></a>. Pick by access level: <strong>no code at
+all</strong> &rarr; method 1 (or 3 once installed); <strong>theme
+control</strong> &rarr; methods 2/4. For the mascot <em>behind</em> your
+content, see <a href="overlay.html">Overlay</a>.</p>
 
-<h3>How it works on a real WordPress site</h3>
+<h2 id="m1">Method 1 &mdash; the iframe embed <span class="rec">recommended
+  default</span></h2>
+<p>Two moving parts: one hosted file, one HTML block. A non-coder can do
+it in five minutes and never touch PHP.</p>
+<h3>On a real WordPress site</h3>
 <ol>
-<li>Take <code>live.html</code> and strip the document wrapper
-(<code>doctype/html/head/body</code> tags, the page title, the
+<li><strong>Host the file.</strong> The Media Library refuses
+<code>.html</code> uploads (MIME check), so place <code>live.html</code>
+via SFTP / hosting file-manager at
+<code>wp-content/uploads/bread-mascot/live.html</code> &mdash; static
+files in <code>uploads/</code> are served directly. (Alternative: host it
+on GitHub Pages and reference that URL &mdash; then updates never touch
+the WP install at all. Managed hosts like Kinsta/WordPress.com often
+<em>do</em> allow file access or a file-manager plugin; if yours truly
+doesn&rsquo;t, the GitHub-Pages URL is your friend.)</li>
+<li><strong>Embed.</strong> Add a <em>Custom HTML</em> block (Gutenberg)
+or HTML widget (Elementor/Divi) and paste:</li>
+</ol>
+<pre><code>&lt;div style=&quot;width:min(460px,100%);margin:0 auto&quot;&gt;
+  &lt;iframe src=&quot;/wp-content/uploads/bread-mascot/live.html&quot;
+          title=&quot;Bread mascot&quot; loading=&quot;lazy&quot;
+          style=&quot;width:100%;aspect-ratio:1;border:0;border-radius:20px&quot;&gt;
+  &lt;/iframe&gt;
+&lt;/div&gt;</code></pre>
+<div class="demo-frame">
+  <p class="label">Live &mdash; exactly the markup above</p>
+  <iframe class="mascot" src="mascot/live.html" title="bread mascot"
+          loading="lazy"></iframe>
+</div>
+<ul>
+<li><strong>Sandboxed both ways:</strong> theme CSS can&rsquo;t break the
+mascot, the mascot can&rsquo;t leak into the theme.</li>
+<li><strong>Works on every plan</strong> including WordPress.com free
+&mdash; iframes need no <code>unfiltered_html</code> and no plugins.</li>
+<li><strong>Update = re-upload one file;</strong> every embed picks it
+up. Cache plugins never touch iframe content.</li>
+<li><strong>Limit:</strong> a rectangular island in the flow &mdash; the
+page cannot overlap it, and it cannot see the page&rsquo;s mouse. (That
+is what the <a href="overlay.html">Overlay</a> section solves.)</li>
+</ul>
+<hr>
+<h2 id="m2">Method 2 &mdash; the inline embed (no iframe)</h2>
+<p>The mascot lives <em>in</em> the page document: same DOM, same paint.
+Blends into layouts an iframe can&rsquo;t.</p>
+<h3>On a real WordPress site</h3>
+<ol>
+<li>Strip <code>live.html</code>&rsquo;s document wrapper
+(<code>doctype/html/head/body</code>, the page title, the
 <code>html,body</code> CSS rules).</li>
-<li>Keep the four pieces: <code>&lt;style&gt;</code>, the stage + rig
-markup, the runtime <code>&lt;script&gt;</code>, the harness
+<li>Keep four pieces: <code>&lt;style&gt;</code>, stage + rig markup,
+runtime <code>&lt;script&gt;</code>, harness
 <code>&lt;script&gt;</code>.</li>
-<li>Scope every CSS rule under a host class
-(<code>.bm-inline-host&nbsp;#stage&nbsp;{&hellip;}</code>) so the mascot
-can&rsquo;t leak styles into your theme.</li>
-<li>Paste the result into a <em>Custom HTML</em> block. On the block
-below, that fragment is really running &mdash; inspect this page&rsquo;s
-source, there is no iframe here.</li>
+<li>Scope every CSS rule under a host class so nothing leaks into the
+theme.</li>
+<li>Paste into a <em>Custom HTML</em> block. The instance below is the
+real thing &mdash; view this page&rsquo;s source: no iframe here.</li>
 </ol>
 <pre><code>&lt;div class=&quot;bm-inline-host&quot;&gt;
   &lt;style&gt;/* mascot CSS, every rule scoped under .bm-inline-host */&lt;/style&gt;
-
   &lt;div id=&quot;stage&quot;&gt;&lt;/div&gt;
-  &lt;p&gt;&amp;hellip;interaction hints (move / click / leave)&amp;hellip;&lt;/p&gt;
-  &lt;div id=&quot;rig&quot;&gt;&amp;hellip;trance / asleep / blush sliders&amp;hellip;&lt;/div&gt;
-
+  &lt;p&gt;&amp;hellip;interaction hints&amp;hellip;&lt;/p&gt;
+  &lt;div id=&quot;rig&quot;&gt;&amp;hellip;test-rig sliders&amp;hellip;&lt;/div&gt;
   &lt;script&gt;/* runtime: scene JSON + base64 art + sim core (~104 KB) */&lt;/script&gt;
   &lt;script&gt;/* harness: pointer listeners + slider wiring */&lt;/script&gt;
 &lt;/div&gt;</code></pre>
@@ -290,36 +335,116 @@ function createSim(scene) {
 </script>
 </div>
 </div>
-
-<h3>Trade-offs</h3>
 <ul>
 <li><strong>Needs <code>unfiltered_html</code>:</strong> admin on
-self-hosted WordPress; on WordPress.com that means the Business/Commerce
-plan (scripts are stripped below that).</li>
-<li><strong>One instance per page:</strong> the fragment uses element
-ids (<code>#stage</code>, <code>#rig</code>) &mdash; two copies would
-collide. (Multiple instances: give each a suffix and pass it to the
-harness.)</li>
-<li><strong>Theme bleed goes both ways:</strong> aggressive theme CSS
-(<code>*&nbsp;{padding:0}</code>) or a strict CSP can still bite; test on
-a staging page.</li>
-<li><strong>Updates mean re-pasting</strong> the fragment (or generating
-it from a partial the way this demo does).</li>
+self-hosted WP; on WordPress.com that means Business/Commerce plan
+(scripts are stripped below that).</li>
+<li><strong>One instance per page</strong> (the fragment uses element
+ids); <strong>updates mean re-pasting</strong> &mdash; generate the
+fragment from a partial, the way this demo does.</li>
+<li><strong>Perk:</strong> page JS can talk to it directly &mdash; no
+postMessage needed.</li>
 </ul>
+<hr>
+<h2 id="m3">Method 3 &mdash; the <code>[bread_mascot]</code> shortcode</h2>
+<p>The WordPress-native answer: editors type a tag, the server renders
+the embed. Nothing HTML-shaped ever reaches the editor.</p>
+<h3>On a real WordPress site</h3>
+<ol>
+<li>Drop this into <code>wp-content/mu-plugins/bread-mascot.php</code>
+(always-on) or a WPCode PHP snippet:</li>
+</ol>
+<pre><code>&lt;?php
+/* Plugin Name: Bread Mascot (shortcode) */
+add_shortcode(&#x27;bread_mascot&#x27;, function ($atts) {
+    $a    = shortcode_atts([&#x27;size&#x27; =&gt; 420, &#x27;align&#x27; =&gt; &#x27;center&#x27;], $atts);
+    $url  = esc_url(content_url(&#x27;uploads/bread-mascot/live.html&#x27;));
+    $size = max(160, min(640, intval($a[&#x27;size&#x27;])));
+    return sprintf(
+        &#x27;&lt;div class=&quot;bread-mascot align%s&quot; style=&quot;width:%dpx;max-width:100%%&quot;&gt;&#x27;
+      . &#x27;&lt;iframe src=&quot;%s&quot; title=&quot;Bread mascot&quot; loading=&quot;lazy&quot; &#x27;
+      . &#x27;style=&quot;width:100%%;aspect-ratio:1;border:0;border-radius:20px&quot;&gt;&#x27;
+      . &#x27;&lt;/iframe&gt;&lt;/div&gt;&#x27;,
+        esc_attr($a[&#x27;align&#x27;]), $size, $url);
+});</code></pre>
+<li>Host <code>live.html</code> once (method 1).</li>
+<li>Anywhere shortcodes run &mdash; posts, pages, Text widgets &mdash;
+write <code>[bread_mascot size="380" align="center"]</code>. In PHP
+templates: <code>do_shortcode('[bread_mascot]')</code>.</li>
+</ol>
+<p>GitHub Pages has no PHP, so a ~15-line script performs exactly what
+<code>do_shortcode()</code> would, client-side. The &ldquo;post&rdquo;
+below contains the raw tag:</p>
+<pre><code>The bread mascot says hello:
 
-<div class="verdict">
-<span class="pill good">no iframe chrome, blends into the page</span>
-<span class="pill good">page JS can talk to it directly</span>
-<span class="pill warn">requires unfiltered_html / Business plan</span>
-<span class="pill warn">one instance per page</span>
+    [bread_mascot size=&quot;380&quot; align=&quot;center&quot;]
+
+&amp;hellip;carrying on with the article as if nothing happened.</code></pre>
+<div class="demo-frame">
+  <p class="label">Live &mdash; after shortcode expansion (simulated)</p>
+  <div data-shortcodes>
+  <p>The bread mascot says hello:</p>
+  [bread_mascot size="380" align="center"]
+  <p>&hellip;carrying on with the article as if nothing happened.</p>
+  </div>
 </div>
-<p class="meta">Posted in <a href="#">Tutorials</a> &mdash; bread mascot embedding series</p></main>
+<ul>
+<li>Server-side expansion means it also survives feeds and page caches
+&mdash; unlike a client-side JS replacer.</li>
+<li>The tag outputs method 1&rsquo;s iframe on purpose: one hosted file,
+zero JS to manage. A split-<code>mascot.js</code> variant is possible
+but needs cache-plugin exclusions.</li>
+</ul>
+<hr>
+<h2 id="m4">Method 4 &mdash; the site-wide corner companion</h2>
+<p>One script include and every page gets a loaf sitting bottom-right.
+It is method 1&rsquo;s iframe, placed by JS instead of by hand &mdash;
+and yes, it is running on every page of this demo (look bottom-right;
+the Overlay page turns it off to keep the corner free).</p>
+<h3>On a real WordPress site</h3>
+<ol>
+<li>Put <code>bread-corner-mascot.js</code> in the child theme, or paste
+it as a WPCode HTML snippet set to <em>run everywhere on the front
+end</em>.</li>
+<li>Enqueue it:</li>
+</ol>
+<pre><code>&lt;?php
+// child-theme functions.php
+add_action(&#x27;wp_enqueue_scripts&#x27;, function () {
+    wp_enqueue_script(&#x27;bread-corner&#x27;,
+        get_stylesheet_directory_uri() . &#x27;/bread-corner-mascot.js&#x27;,
+        array(), &#x27;1.0&#x27;, array(&#x27;strategy&#x27; =&gt; &#x27;defer&#x27;));
+});</code></pre>
+<div class="demo-frame">
+  <p class="label">Live &mdash; the companion is on every page. Dismiss
+  it, then bring it back:</p>
+  <p><button type="button" id="bring-back" style="padding:8px 16px;
+     border-radius:8px;border:1px solid var(--line);background:#fff;
+     cursor:pointer">re-enable the corner mascot</button>
+     <span id="corner-state" style="color:var(--soft);font-size:13px"></span></p>
+</div>
+<h3>Etiquette</h3>
+<ul>
+<li>A pet that cannot be shooed is a stain: dismiss &rarr; remembered
+for the session via <code>sessionStorage</code>.</li>
+<li>Small on mobile, <code>loading="lazy"</code>, modest
+<code>z-index</code> so cookie banners and modals stay on top.</li>
+<li>Consider front page + blog only &mdash; a checkout page is not a
+terrarium.</li>
+</ul>
+<div class="verdict">
+<span class="pill good">method 1: zero code for editors</span>
+<span class="pill good">method 2: blends into the page</span>
+<span class="pill good">method 3: native WP workflow</span>
+<span class="pill good">method 4: site-wide in one include</span>
+<span class="pill warn">methods 2&ndash;4 need script access</span>
+</div>
+<p class="meta">Posted in <a href="#">Tutorials</a> &mdash; bread mascot series</p></main>
 <aside>
   <div class="widget"><h2>About this demo</h2>
-    <p style="margin:0">A static site that imitates a WordPress theme to
-    show four ways of embedding the interactive bread mascot. GitHub Pages
-    has no PHP, so wherever real WordPress would run code server-side, the
-    demo says so and simulates it.</p></div>
+    <p style="margin:0">A static site imitating a WordPress theme. Where
+    real WordPress would run PHP server-side, the demo says so and
+    simulates it (GitHub Pages has no PHP).</p></div>
   <div class="widget"><h2>The mascot</h2>
     <ul>
       <li>One self-contained file, ~104&nbsp;KB</li>
@@ -329,14 +454,15 @@ it from a partial the way this demo does).</li>
       <li>Leave &rarr; he sleeps, return &rarr; startle-wake</li>
     </ul></div>
   <div class="widget"><h2>GDPR note</h2>
-    <p style="margin:0">The mascot makes zero third-party requests and
-    processes no data &mdash; embed it on EU sites without a cookie
-    debate.</p></div>
+    <p style="margin:0">Zero third-party requests, stores nothing &mdash;
+    GDPR-clean by construction.</p></div>
 </aside>
 </div>
 <footer class="site-foot"><div class="wrap">Blissful Ignorance &mdash;
-  WordPress embedding demo &middot; mascot generated by
+  WordPress embedding &amp; overlay demo &middot; mascot generated by
   <code>scripts/mascot_js.py</code> (bread-stickers project) &middot;
   served by GitHub Pages, not WordPress &#128527;</div></footer>
 <script src="assets/corner-mascot.js" defer></script>
+<script src="assets/shortcode-sim.js" defer></script>
+<script>document.getElementById("bring-back").addEventListener("click",function(){sessionStorage.removeItem("breadMascotDismissed");location.reload();});document.getElementById("corner-state").textContent=document.getElementById("bread-corner")?"currently visible":"currently dismissed (session only)";</script>
 </body></html>
