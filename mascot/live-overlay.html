@@ -267,9 +267,19 @@ function createSim(scene) {
      positions saturate the gaze instead of spinning it. */
   (function () {
     var stage = document.getElementById('stage');
+    // ready handshake: the parent keeps the frame invisible until this
+    // arrives. A missing/blocked asset never runs this script, so the
+    // visitor is shown nothing while the parent logs the failure.
+    try { parent.postMessage({bread: 'mascot', k: 'ready'}, '*'); }
+    catch (e) {}
     addEventListener('message', function (ev) {
       var d = ev.data || {};
       if (d.bread !== 'mascot') return;
+      if (d.k === 'ping') {   // parent attached its listener late: re-announce
+        try { parent.postMessage({bread: 'mascot', k: 'ready'}, '*'); }
+        catch (e) {}
+        return;
+      }
       var r = stage.getBoundingClientRect();
       function cl(v, m) { return Math.max(-r.width * m,
                                   Math.min(r.width * (1 + m), v)); }

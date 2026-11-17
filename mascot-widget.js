@@ -15,16 +15,14 @@
  * display filters (wpautop, wptexturize) have nothing to mangle — this
  * route needs no mu-plugin guard.
  *
+ * Failure mode: the frame stays invisible until the mascot inside
+ * reports ready; if the asset is missing or blocked, the widget removes
+ * itself and logs a console error — visitors never see anything broken.
+ *
  * Config via data attributes on the script tag:
  *   data-size="230"          frame edge length in px
  *   data-inset="18"          distance from the corner, px
  *   data-corner="br"         br | bl | tr | tl
- *   data-front="1"           topmost layer (the default); "0" = behind
- *                            the content
- *   data-raise="article, main"
- *                            selectors lifted above him in behind mode
- *                            (so "behind" works even on themes without
- *                            positioned content)
  *
  * The mascot: https://blissfull-ignorance.github.io/blissful-g-io/
  * (bread-stickers project, vendor-free single-file build).
@@ -69,7 +67,29 @@
   f.setAttribute('aria-hidden', 'true');
   f.setAttribute('tabindex', '-1');
   f.setAttribute('loading', 'lazy');
+  f.style.visibility = 'hidden';   // until the mascot inside says ready
   document.body.appendChild(f);
+
+  // professional failure mode: if the mascot asset is missing or
+  // blocked, its script never runs, no ready message arrives, and the
+  // widget removes itself after a grace period - visitors never see a
+  // broken frame, developers find a console error.
+  var live = false;
+  var boom = setTimeout(function () {
+    if (live) return;
+    console.error('[bread-mascot] mascot asset did not load: ' + src +
+                  ' - widget removed.');
+    f.remove();
+  }, 5000);
+  addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (d.bread === 'mascot' && d.k === 'ready' && ev.source === f.contentWindow) {
+      live = true;
+      clearTimeout(boom);
+      f.style.visibility = 'visible';
+      post('enter', 0, 0);
+    }
+  });
 
   // the bridge: the frame is click-through, so WE forward the pointer
   var rect;
@@ -77,10 +97,11 @@
   measure();
   addEventListener('resize', measure);
   function post(k, x, y) {
+    if (!live) return;
     try { f.contentWindow.postMessage({bread: 'mascot', k: k, x: x, y: y}, '*'); }
     catch (e) {}
   }
-  f.addEventListener('load', function () { post('enter', 0, 0); });
+  f.addEventListener('load', function () { if (!live) post('ping', 0, 0); });
   addEventListener('pointermove', function (e) {
     post('move', e.clientX - rect.left, e.clientY - rect.top);
   }, {passive: true});

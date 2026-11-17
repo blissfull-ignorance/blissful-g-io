@@ -6,9 +6,9 @@ produces:
 
   embedding.html   the four embedding methods (iframe / inline / shortcode
                    / corner companion), each explained + live
-  overlay.html     the OVERLAY section: mascot BEHIND the page content,
-                   eyes following the mouse across the whole page —
-                   option 1 (iframe) + pointer-events:none + a
+  overlay.html     the OVERLAY section: mascot as the TOPMOST layer of
+                   the page, eyes following the mouse across the whole
+                   body — option 1 (iframe) + pointer-events:none + a
                    postMessage bridge
   index.html       landing page
   mascot/live.html         verbatim mascot (iframe sources)
@@ -88,9 +88,19 @@ OVERLAY_BRIDGE = """
      positions saturate the gaze instead of spinning it. */
   (function () {
     var stage = document.getElementById('stage');
+    // ready handshake: the parent keeps the frame invisible until this
+    // arrives. A missing/blocked asset never runs this script, so the
+    // visitor is shown nothing while the parent logs the failure.
+    try { parent.postMessage({bread: 'mascot', k: 'ready'}, '*'); }
+    catch (e) {}
     addEventListener('message', function (ev) {
       var d = ev.data || {};
       if (d.bread !== 'mascot') return;
+      if (d.k === 'ping') {   // parent attached its listener late: re-announce
+        try { parent.postMessage({bread: 'mascot', k: 'ready'}, '*'); }
+        catch (e) {}
+        return;
+      }
       var r = stage.getBoundingClientRect();
       function cl(v, m) { return Math.max(-r.width * m,
                                   Math.min(r.width * (1 + m), v)); }
@@ -209,8 +219,7 @@ site</strong> while its eyes follow your cursor.</p>
      corner as the <em>topmost layer</em> over your blog text, follows
      the mouse across the entire page, and still chomps when clicked
      &mdash; method 1 plus <code>pointer-events:none</code> and a
-     postMessage bridge. A toggle sends him <em>behind</em> the text
-     instead, with a soft window punched in the card.</p></div>
+     postMessage bridge.</p></div>
   <div class="card"><h3><a href="local-wp.html">Local WordPress
      &mdash; the real thing</a></h3><p>Pages can only imitate WordPress.
      <code>wp_local.py</code> boots genuine WordPress with PHP on
@@ -432,7 +441,7 @@ body = """
 mascot/live.html</code></a>. Pick by access level: <strong>no code at
 all</strong> &rarr; method 1 (or 3 once installed); <strong>theme
 control</strong> &rarr; methods 2/4. For the mascot <em>on top of</em>
-(or behind) your content, see <a href="overlay.html">Overlay</a>.</p>
+your content, see <a href="overlay.html">Overlay</a>.</p>
 """ + sec1 + "<hr>" + sec2 + "<hr>" + sec3 + "<hr>" + sec4
 page("embedding.html", "Embedding methods 1–4", "embed",
      body.replace("<!--INLINE_FRAGMENT-->", INLINE_FRAGMENT),
@@ -451,13 +460,29 @@ parent_js = '''
 // overlay parent glue (goes in a Custom-HTML block or the same footer
 // enqueue as method 4) — the iframe itself is pointer-events:none, so
 // the page stays fully usable and WE forward the pointer:
-var f = document.getElementById('overlay-mascot'), rect;
+var f = document.getElementById('overlay-mascot'), rect, live = false;
 function measure() { rect = f.getBoundingClientRect(); }
 measure(); addEventListener('resize', measure);
 function post(k, x, y) {
+  if (!live) return;
   f.contentWindow.postMessage({bread: 'mascot', k: k, x: x, y: y}, '*');
 }
-f.addEventListener('load', function () { post('enter', 0, 0); }); // wake
+// failure mode: the frame (start it visibility:hidden) stays invisible
+// until the mascot inside posts {k:'ready'}. Asset missing -> visitors
+// see nothing, developers get a console error:
+addEventListener('message', function (ev) {
+  var d = ev.data || {};
+  if (d.bread === 'mascot' && d.k === 'ready' && ev.source === f.contentWindow) {
+    live = true; clearTimeout(boom);
+    f.style.visibility = 'visible';
+    post('enter', 0, 0);                          // wake
+  }
+});
+var boom = setTimeout(function () {
+  console.error('[bread-mascot] overlay asset did not load: ' + f.src);
+  f.remove();
+}, 5000);
+f.addEventListener('load', function () { if (!live) post('ping', 0, 0); });
 addEventListener('pointermove', function (e) {                    // gaze
   post('move', e.clientX - rect.left, e.clientY - rect.top);      // ANYWHERE
 }, {passive: true});
@@ -465,26 +490,11 @@ addEventListener('click', function (e) {        // chomp/crate hit-test
   if (e.clientX >= rect.left && e.clientX <= rect.right &&
       e.clientY >= rect.top  && e.clientY <= rect.bottom)
     post('click', e.clientX - rect.left, e.clientY - rect.top);   // works
-});                                            // even on text above him
+});                                            // even on text under him
 document.documentElement.addEventListener('mouseleave',
   function () { post('leave'); });             // out of the window: sleep
 document.documentElement.addEventListener('mouseenter',
-  function () { post('enter', 0, 0); });       // back: wake with a blink
-
-// optional polish for the BEHIND mode: punch a soft round WINDOW in the
-// content card around the corner so the mascot never looks "stuck behind
-// the card". The card masks a radial hole at (--hx,--hy); we keep those
-// in card-local coords as the page scrolls (133 = frame inset 18 + half
-// of 230px):
-var art = document.querySelector('main article');
-function placeHole() {
-  var r = art.getBoundingClientRect();
-  art.style.setProperty('--hx', (innerWidth  - 133 - r.left) + 'px');
-  art.style.setProperty('--hy', (innerHeight - 133 - r.top)  + 'px');
-}
-placeHole();
-addEventListener('scroll', placeHole, { passive: true });
-addEventListener('resize', placeHole);'''
+  function () { post('enter', 0, 0); });       // back: wake with a blink'''
 
 frame_css = '''
 /* the frame: fixed to the corner, TOPMOST layer, click-through */
@@ -503,8 +513,7 @@ body = """
 the <strong>topmost layer</strong>, floating over the blog text, eyes
 following the mouse wherever it goes on the page. Possible with method
 1? Yes &mdash; and this very page is the demo. Scroll, move your mouse,
-click right on him. (The &ldquo;behind the text&rdquo; look is one
-checkbox away, see below.)</p>
+click right on him.</p>
 
 <h3>Try it</h3>
 <ul>
@@ -523,11 +532,6 @@ falls asleep. Back in &rarr; wake.</li>
 <li><strong>Scroll</strong> &mdash; paragraphs slide under him, crisp
 on top; nothing to slice, nothing to fog.</li>
 </ul>
-
-<label class="z-toggle"><input type="checkbox" id="zflip"> put the
-mascot <strong>behind</strong> the content instead (flips
-<code>z-index</code> and punches the soft window in the card &mdash;
-compare the two looks)</label>
 
 <h3>How it works &mdash; three ingredients</h3>
 <p><strong>1. A transparent variant of the mascot.</strong> The plain
@@ -548,20 +552,14 @@ layer:</strong></p>
 """ + pre(frame_css) + """
 <p>That is all &ldquo;on top&rdquo; takes: a high <code>z-index</code>
 &mdash; high enough to beat the theme&rsquo;s stacking, low enough to
-stay under modals and cookie banners. Flip the toggle above to send him
-<em>behind</em> the content instead: his <code>z-index</code> drops to
-0, the card rises to 1, and the demo punches a soft <strong>round
-window</strong> in the card around him (a radial mask at
-<code>(--hx,--hy)</code>, kept centred on the corner as the page
-scrolls) so the text fades politely around him instead of slicing
-across his face.</p>
-<p><strong>3. The postMessage bridge.</strong> Here is the catch &mdash;
-and it applies in <em>both</em> layers: the frame must be
-<code>pointer-events:none</code> &mdash; otherwise an invisible sheet of
-glass sits over the corner and no link, selection or scroll works
-there anymore. But a click-through iframe also receives <em>no mouse
-events itself</em>, so the mascot would be blind. The parent page
-therefore forwards the pointer:</p>
+stay under modals and cookie banners. No positioning tricks on the
+content itself; nothing to punch, mask or track.</p>
+<p><strong>3. The postMessage bridge.</strong> Here is the catch: the
+frame must be <code>pointer-events:none</code> &mdash; otherwise an
+invisible sheet of glass sits over the corner and no link, selection or
+scroll works there anymore. But a click-through iframe also receives
+<em>no mouse events itself</em>, so the mascot would be blind. The
+parent page therefore forwards the pointer:</p>
 """ + pre(parent_js) + """
 <p>Inside the frame, a ~20-line listener turns those messages back into
 synthetic <code>pointermove / pointerenter / pointerleave / click</code>
@@ -586,12 +584,15 @@ scripts&rdquo; setting and never touches code again:</p>
 WordPress&rsquo;s display filters (wpautop, wptexturize) have nothing to
 mangle: this route needs no mu-plugin guard at all.</li>
 <li><strong>Config via data attributes:</strong> <code>data-size</code>,
-<code>data-inset</code>, <code>data-corner="br|bl|tr|tl"</code>,
-<code>data-front="0"</code> (behind the content instead of topmost),
-<code>data-raise="article, main"</code> (selectors lifted above him so
-&ldquo;behind&rdquo; works even on themes with unpositioned content).</li>
+<code>data-inset</code>, <code>data-corner="br|bl|tr|tl"</code>.</li>
 <li><strong>Updates are ours:</strong> replace the mascot on this site
 and every embedding site picks it up on next load.</li>
+<li><strong>Professional failure mode:</strong> the frame stays
+invisible until the mascot inside reports ready over the bridge. If the
+asset is missing, renamed or blocked, the widget removes itself after
+five seconds and logs a <code>console.error</code> &mdash; visitors
+never see a broken frame, developers find the reason in the
+devtools.</li>
 <li>Works on self-hosted WordPress everywhere; on WordPress.com it
 needs the Business/Commerce plan (scripts are stripped below that).</li>
 </ul>
@@ -621,7 +622,6 @@ on long pages.</li>
 <span class="pill good">still method 1: one file + one block</span>
 <span class="pill good">topmost layer, page stays 100% usable</span>
 <span class="pill good">gaze spans the whole page</span>
-<span class="pill good">behind-mode included (window mask)</span>
 <span class="pill warn">needs the transparent variant + ~35 lines of glue</span>
 <span class="pill warn">no hover on touch devices</span>
 </div>
@@ -633,17 +633,36 @@ not a different mascot.</p>
 
 <iframe id="overlay-mascot" src="mascot/live-overlay.html"
         title="Bread mascot (overlay)" tabindex="-1"
-        aria-hidden="true"></iframe>
+        aria-hidden="true" style="visibility:hidden"></iframe>
 
 <script>
 (function () {
   var f = document.getElementById('overlay-mascot'), rect;
+  var live = false;
   function measure() { rect = f.getBoundingClientRect(); }
   measure(); addEventListener('resize', measure);
   function post(k, x, y) {
+    if (!live) return;
     f.contentWindow.postMessage({bread: 'mascot', k: k, x: x, y: y}, '*');
   }
-  f.addEventListener('load', function () { post('enter', 0, 0); });
+  // professional failure mode: the frame stays invisible until the
+  // mascot inside reports ready. Asset missing/blocked -> the visitors
+  // never see anything; developers get a console error.
+  addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (d.bread === 'mascot' && d.k === 'ready' && ev.source === f.contentWindow) {
+      live = true;
+      clearTimeout(boom);
+      f.style.visibility = 'visible';
+      post('enter', 0, 0);
+    }
+  });
+  var boom = setTimeout(function () {
+    console.error('[bread-mascot] overlay asset did not load: ' +
+      f.src + ' — overlay removed, visitors see nothing.');
+    f.remove();
+  }, 5000);
+  f.addEventListener('load', function () { if (!live) post('ping', 0, 0); });
   addEventListener('pointermove', function (e) {
     post('move', e.clientX - rect.left, e.clientY - rect.top);
   }, {passive: true});
@@ -656,25 +675,10 @@ not a different mascot.</p>
     function () { post('leave'); });
   document.documentElement.addEventListener('mouseenter',
     function () { post('enter', 0, 0); });
-  var art = document.querySelector('main article');
-  function placeHole() {
-    var r = art.getBoundingClientRect();
-    art.style.setProperty('--hx', (innerWidth  - 133 - r.left) + 'px');
-    art.style.setProperty('--hy', (innerHeight - 133 - r.top)  + 'px');
-  }
-  placeHole();
-  addEventListener('scroll', placeHole, { passive: true });
-  addEventListener('resize', placeHole);
-  document.getElementById('zflip').addEventListener('change',
-    function (e) {
-      var behind = e.target.checked;
-      f.style.zIndex = behind ? 0 : 60;
-      art.classList.toggle('windowed', behind);
-    });
 })();
 </script>
 """
-# overlay page: full-width, windowed card, no corner companion
+# overlay page: full-width, no corner companion
 page("overlay.html", "Overlay — mascot on top of the content", "overlay",
      body, bodyclass="overlay-page")
 

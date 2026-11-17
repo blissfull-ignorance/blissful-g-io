@@ -3,7 +3,8 @@
 A static GitHub Pages site that mimics a classic WordPress theme and
 demonstrates how to embed the interactive bread mascot (the vendor-free
 loaf from the bread-stickers project): **four embedding methods** plus an
-**overlay technique** that parks the mascot *behind* your content while
+**overlay technique** that parks the mascot as the *topmost layer* of
+your content while
 its eyes follow the mouse across the whole page.
 
 > Live: https://blissfull-ignorance.github.io/blissful-g-io/
@@ -14,7 +15,7 @@ its eyes follow the mouse across the whole page.
 |---|---|
 | [`index.html`](index.html) | overview + live preview |
 | [`embedding.html`](embedding.html) | **Embedding, methods 1–4**, each explained + live: 1 iframe · 2 inline (the real fragment, spliced from the actual mascot file at build time) · 3 `[bread_mascot]` shortcode (PHP shown, `do_shortcode()` simulated client-side — Pages has no PHP) · 4 site-wide corner companion (`assets/corner-mascot.js`, active on every page, dismissible) |
-| [`overlay.html`](overlay.html) | **Overlay**: the mascot fixed in the lower-right corner *behind* the blog text, gaze tracking the cursor over the entire page, clicks on the text above him still chomp. Method 1 + `pointer-events:none` + a postMessage bridge; a tracked round "window" in the card keeps him from looking stuck; z-toggle compares behind/in-front. Includes the **zero-maintenance route**: one external `<script>` tag (`mascot-widget.js`) |
+| [`overlay.html`](overlay.html) | **Overlay**: the mascot fixed in the lower-right corner as the *topmost layer* over the blog text, gaze tracking the cursor over the entire page, clicks on him chomp while the page stays fully usable underneath. Method 1 + `pointer-events:none` + a postMessage bridge, with a ready-handshake failure mode (asset missing → visitors see nothing, devs get a console error). Includes the **zero-maintenance route**: one external `<script>` tag (`mascot-widget.js`) |
 | [`local-wp.html`](local-wp.html) | **Local WordPress**: documents `wp_local.py` — real WordPress with PHP on localhost, the proof chain, the wpautop/wptexturize caveat, script reference |
 
 ## Development loop (localhost-first, few pushes)
@@ -41,9 +42,11 @@ filter can mangle it):
 ```
 
 Config via data attributes: `data-size`, `data-inset`,
-`data-corner="br|bl|tr|tl"`, `data-front="1"`, `data-raise` (selectors
-lifted above him). The widget loads `mascot/live-overlay.html` from
-next to itself, so updates happen on our side only. The local WP PoC
+`data-corner="br|bl|tr|tl"`. The widget loads `mascot/live-overlay.html`
+from next to itself, so updates happen on our side only. Failure mode:
+the frame stays invisible until the mascot inside reports ready — if the
+asset is missing or blocked, the widget removes itself and logs a
+`console.error`, so visitors never see anything broken. The local WP PoC
 ships a **Mascot-in-corner** page whose entire integration is this one
 tag — proof it survives real WordPress untouched.
 

@@ -23,8 +23,7 @@ theme; each section explains what you would do on a real site.</div>
 the <strong>topmost layer</strong>, floating over the blog text, eyes
 following the mouse wherever it goes on the page. Possible with method
 1? Yes &mdash; and this very page is the demo. Scroll, move your mouse,
-click right on him. (The &ldquo;behind the text&rdquo; look is one
-checkbox away, see below.)</p>
+click right on him.</p>
 
 <h3>Try it</h3>
 <ul>
@@ -43,11 +42,6 @@ falls asleep. Back in &rarr; wake.</li>
 <li><strong>Scroll</strong> &mdash; paragraphs slide under him, crisp
 on top; nothing to slice, nothing to fog.</li>
 </ul>
-
-<label class="z-toggle"><input type="checkbox" id="zflip"> put the
-mascot <strong>behind</strong> the content instead (flips
-<code>z-index</code> and punches the soft window in the card &mdash;
-compare the two looks)</label>
 
 <h3>How it works &mdash; three ingredients</h3>
 <p><strong>1. A transparent variant of the mascot.</strong> The plain
@@ -74,30 +68,40 @@ layer:</strong></p>
 }</code></pre>
 <p>That is all &ldquo;on top&rdquo; takes: a high <code>z-index</code>
 &mdash; high enough to beat the theme&rsquo;s stacking, low enough to
-stay under modals and cookie banners. Flip the toggle above to send him
-<em>behind</em> the content instead: his <code>z-index</code> drops to
-0, the card rises to 1, and the demo punches a soft <strong>round
-window</strong> in the card around him (a radial mask at
-<code>(--hx,--hy)</code>, kept centred on the corner as the page
-scrolls) so the text fades politely around him instead of slicing
-across his face.</p>
-<p><strong>3. The postMessage bridge.</strong> Here is the catch &mdash;
-and it applies in <em>both</em> layers: the frame must be
-<code>pointer-events:none</code> &mdash; otherwise an invisible sheet of
-glass sits over the corner and no link, selection or scroll works
-there anymore. But a click-through iframe also receives <em>no mouse
-events itself</em>, so the mascot would be blind. The parent page
-therefore forwards the pointer:</p>
+stay under modals and cookie banners. No positioning tricks on the
+content itself; nothing to punch, mask or track.</p>
+<p><strong>3. The postMessage bridge.</strong> Here is the catch: the
+frame must be <code>pointer-events:none</code> &mdash; otherwise an
+invisible sheet of glass sits over the corner and no link, selection or
+scroll works there anymore. But a click-through iframe also receives
+<em>no mouse events itself</em>, so the mascot would be blind. The
+parent page therefore forwards the pointer:</p>
 <pre><code>// overlay parent glue (goes in a Custom-HTML block or the same footer
 // enqueue as method 4) — the iframe itself is pointer-events:none, so
 // the page stays fully usable and WE forward the pointer:
-var f = document.getElementById(&#x27;overlay-mascot&#x27;), rect;
+var f = document.getElementById(&#x27;overlay-mascot&#x27;), rect, live = false;
 function measure() { rect = f.getBoundingClientRect(); }
 measure(); addEventListener(&#x27;resize&#x27;, measure);
 function post(k, x, y) {
+  if (!live) return;
   f.contentWindow.postMessage({bread: &#x27;mascot&#x27;, k: k, x: x, y: y}, &#x27;*&#x27;);
 }
-f.addEventListener(&#x27;load&#x27;, function () { post(&#x27;enter&#x27;, 0, 0); }); // wake
+// failure mode: the frame (start it visibility:hidden) stays invisible
+// until the mascot inside posts {k:&#x27;ready&#x27;}. Asset missing -&gt; visitors
+// see nothing, developers get a console error:
+addEventListener(&#x27;message&#x27;, function (ev) {
+  var d = ev.data || {};
+  if (d.bread === &#x27;mascot&#x27; &amp;&amp; d.k === &#x27;ready&#x27; &amp;&amp; ev.source === f.contentWindow) {
+    live = true; clearTimeout(boom);
+    f.style.visibility = &#x27;visible&#x27;;
+    post(&#x27;enter&#x27;, 0, 0);                          // wake
+  }
+});
+var boom = setTimeout(function () {
+  console.error(&#x27;[bread-mascot] overlay asset did not load: &#x27; + f.src);
+  f.remove();
+}, 5000);
+f.addEventListener(&#x27;load&#x27;, function () { if (!live) post(&#x27;ping&#x27;, 0, 0); });
 addEventListener(&#x27;pointermove&#x27;, function (e) {                    // gaze
   post(&#x27;move&#x27;, e.clientX - rect.left, e.clientY - rect.top);      // ANYWHERE
 }, {passive: true});
@@ -105,26 +109,11 @@ addEventListener(&#x27;click&#x27;, function (e) {        // chomp/crate hit-tes
   if (e.clientX &gt;= rect.left &amp;&amp; e.clientX &lt;= rect.right &amp;&amp;
       e.clientY &gt;= rect.top  &amp;&amp; e.clientY &lt;= rect.bottom)
     post(&#x27;click&#x27;, e.clientX - rect.left, e.clientY - rect.top);   // works
-});                                            // even on text above him
+});                                            // even on text under him
 document.documentElement.addEventListener(&#x27;mouseleave&#x27;,
   function () { post(&#x27;leave&#x27;); });             // out of the window: sleep
 document.documentElement.addEventListener(&#x27;mouseenter&#x27;,
-  function () { post(&#x27;enter&#x27;, 0, 0); });       // back: wake with a blink
-
-// optional polish for the BEHIND mode: punch a soft round WINDOW in the
-// content card around the corner so the mascot never looks &quot;stuck behind
-// the card&quot;. The card masks a radial hole at (--hx,--hy); we keep those
-// in card-local coords as the page scrolls (133 = frame inset 18 + half
-// of 230px):
-var art = document.querySelector(&#x27;main article&#x27;);
-function placeHole() {
-  var r = art.getBoundingClientRect();
-  art.style.setProperty(&#x27;--hx&#x27;, (innerWidth  - 133 - r.left) + &#x27;px&#x27;);
-  art.style.setProperty(&#x27;--hy&#x27;, (innerHeight - 133 - r.top)  + &#x27;px&#x27;);
-}
-placeHole();
-addEventListener(&#x27;scroll&#x27;, placeHole, { passive: true });
-addEventListener(&#x27;resize&#x27;, placeHole);</code></pre>
+  function () { post(&#x27;enter&#x27;, 0, 0); });       // back: wake with a blink</code></pre>
 <p>Inside the frame, a ~20-line listener turns those messages back into
 synthetic <code>pointermove / pointerenter / pointerleave / click</code>
 events on the stage &mdash; the mascot&rsquo;s own harness reads only
@@ -147,12 +136,15 @@ scripts&rdquo; setting and never touches code again:</p>
 WordPress&rsquo;s display filters (wpautop, wptexturize) have nothing to
 mangle: this route needs no mu-plugin guard at all.</li>
 <li><strong>Config via data attributes:</strong> <code>data-size</code>,
-<code>data-inset</code>, <code>data-corner="br|bl|tr|tl"</code>,
-<code>data-front="0"</code> (behind the content instead of topmost),
-<code>data-raise="article, main"</code> (selectors lifted above him so
-&ldquo;behind&rdquo; works even on themes with unpositioned content).</li>
+<code>data-inset</code>, <code>data-corner="br|bl|tr|tl"</code>.</li>
 <li><strong>Updates are ours:</strong> replace the mascot on this site
 and every embedding site picks it up on next load.</li>
+<li><strong>Professional failure mode:</strong> the frame stays
+invisible until the mascot inside reports ready over the bridge. If the
+asset is missing, renamed or blocked, the widget removes itself after
+five seconds and logs a <code>console.error</code> &mdash; visitors
+never see a broken frame, developers find the reason in the
+devtools.</li>
 <li>Works on self-hosted WordPress everywhere; on WordPress.com it
 needs the Business/Commerce plan (scripts are stripped below that).</li>
 </ul>
@@ -182,7 +174,6 @@ on long pages.</li>
 <span class="pill good">still method 1: one file + one block</span>
 <span class="pill good">topmost layer, page stays 100% usable</span>
 <span class="pill good">gaze spans the whole page</span>
-<span class="pill good">behind-mode included (window mask)</span>
 <span class="pill warn">needs the transparent variant + ~35 lines of glue</span>
 <span class="pill warn">no hover on touch devices</span>
 </div>
@@ -194,17 +185,36 @@ not a different mascot.</p>
 
 <iframe id="overlay-mascot" src="mascot/live-overlay.html"
         title="Bread mascot (overlay)" tabindex="-1"
-        aria-hidden="true"></iframe>
+        aria-hidden="true" style="visibility:hidden"></iframe>
 
 <script>
 (function () {
   var f = document.getElementById('overlay-mascot'), rect;
+  var live = false;
   function measure() { rect = f.getBoundingClientRect(); }
   measure(); addEventListener('resize', measure);
   function post(k, x, y) {
+    if (!live) return;
     f.contentWindow.postMessage({bread: 'mascot', k: k, x: x, y: y}, '*');
   }
-  f.addEventListener('load', function () { post('enter', 0, 0); });
+  // professional failure mode: the frame stays invisible until the
+  // mascot inside reports ready. Asset missing/blocked -> the visitors
+  // never see anything; developers get a console error.
+  addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (d.bread === 'mascot' && d.k === 'ready' && ev.source === f.contentWindow) {
+      live = true;
+      clearTimeout(boom);
+      f.style.visibility = 'visible';
+      post('enter', 0, 0);
+    }
+  });
+  var boom = setTimeout(function () {
+    console.error('[bread-mascot] overlay asset did not load: ' +
+      f.src + ' — overlay removed, visitors see nothing.');
+    f.remove();
+  }, 5000);
+  f.addEventListener('load', function () { if (!live) post('ping', 0, 0); });
   addEventListener('pointermove', function (e) {
     post('move', e.clientX - rect.left, e.clientY - rect.top);
   }, {passive: true});
@@ -217,21 +227,6 @@ not a different mascot.</p>
     function () { post('leave'); });
   document.documentElement.addEventListener('mouseenter',
     function () { post('enter', 0, 0); });
-  var art = document.querySelector('main article');
-  function placeHole() {
-    var r = art.getBoundingClientRect();
-    art.style.setProperty('--hx', (innerWidth  - 133 - r.left) + 'px');
-    art.style.setProperty('--hy', (innerHeight - 133 - r.top)  + 'px');
-  }
-  placeHole();
-  addEventListener('scroll', placeHole, { passive: true });
-  addEventListener('resize', placeHole);
-  document.getElementById('zflip').addEventListener('change',
-    function (e) {
-      var behind = e.target.checked;
-      f.style.zIndex = behind ? 0 : 60;
-      art.classList.toggle('windowed', behind);
-    });
 })();
 </script>
 </main>
